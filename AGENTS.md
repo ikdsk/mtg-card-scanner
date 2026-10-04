@@ -7,6 +7,11 @@
 - No default camera image upload; no live price or recognition result fabrication.
 - Read docs/development-plan.md, docs/contracts.md and assigned brief before editing.
 
+## Model assignment
+- Implementation agents use GPT-6.1-Sol (`gpt-6.1-sol`) as explicitly requested by the user.
+- Pin the model per worker process; do not silently fall back to another model.
+- TEST/QA remain independent; changing implementation models does not change the coordinator or global defaults.
+
 ## Isolation and ownership
 - One agent = one branch = one git worktree; never share a writable checkout.
 - Main checkout is for coordinator integration only. Agents cannot checkout/reset/stash/clean there.

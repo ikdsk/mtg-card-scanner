@@ -78,6 +78,9 @@ UI / Camera shell
 | TEST（独立） | `tests/regression/`, `tests/e2e/` | 契約・統合・回帰テスト、実装者の想定を独立検証 |
 | QA（独立） | `docs/qa/`, 無視対象の証拠artifact | 探索テスト、表示・速度・端末差、公開可否報告 |
 
+### 担当モデル
+実装担当（PRICE/DATA・STATE・VISION実装・UI）はユーザー指定の **GPT-6.1-Sol (`gpt-6.1-sol`)** を各worker起動時に明示する。TEST/QAとLEADは独立させる。全体の既定モデルは変えず、指定モデルが使えなければ停止・報告し、黙って代替しない。
+
 ### Git worktree運用
 1. LEADが共通契約と基準commitを確定。
 2. **1エージェント＝1ブランチ＝1専用worktree**。同じcheckoutで同時編集しない。
@@ -183,3 +186,11 @@ P1で承認された契約・エンジンを基準として認識/UI/DATAを並�
 - 端末機材、配信先、費用上限、初回/P95の確定閾値は未決定。
 - 実カード画像・端末ログの収集は同意と保管方針を明示し、リポジトリへ無断投入しない。
 - 短期の基盤完成やunit test成功はMVP完成ではない。作業結果は別の開始記録・QA報告に残す。
+
+## 10. 独立レビューと調査資料
+
+- 認識・性能調査：`docs/research/recognition.md`。固定revisionのモデルregistryとブラウザARCHITECTUREをLEADも再確認済み。CollectorVisionは条件付き第一候補のまま、採用確定ではない。
+- 独立QA受入計画：`docs/qa/acceptance-plan.md`。AC-01〜AC-16、非同期競合、証拠区分、実機不在時のBLOCKEDを定義。調査開始時点のパス提案は本開発計画の所有権へ読み替える。
+- 初期カタログ容量、英語優先の参照データ、日本語カードの精度未検証をP1の重点リスクに追加。
+- 作者がAndroid ARM WebGPUの誤出力を報告しているため、WASMを基準候補として正しさを先に比較する。全端末の現行不具合と断定しない。
+- 初期バックログ：[認識・性能](https://github.com/ikdsk/mtg-card-scanner/issues/1)、[データ・価格](https://github.com/ikdsk/mtg-card-scanner/issues/2)、[カメラUI・計測](https://github.com/ikdsk/mtg-card-scanner/issues/3)、[独立QA](https://github.com/ikdsk/mtg-card-scanner/issues/4)。
