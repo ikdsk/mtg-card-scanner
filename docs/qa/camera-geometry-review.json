@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    "Non-blocking documentation cleanup: docs/reports/camera-geometry.md:27,37-38 preserves the implementer's historical shared-contract status. Current docs/contracts.md:88-92 already matches this candidate; no contract blocker remains.",
+    "Optional future regression coverage: preserve the independent synthetic live-resize / delayed-bitmap-stop probe as a maintained test if desired; adding it is not required for this minimal correction."
+  ],
+  "summary": "PASS for the fixed Issue14 camera-input geometry correction only: no blocking security or logic defects found; independent typecheck, 135 unit/regression tests, production build, 22 Chromium E2E tests, and synthetic zero-width/resize/stop-restart/pagehide probes passed. Not physical-device, recognition-accuracy, Issue11 completion, or release approval.",
+  "base_commit": "aafdda32e1f37ee8eb60b77d49529a08a6ba8b50",
+  "patch_sha256": "835c6449e95a8167f3531e75827946344693d2f9acc9a01a34b5461545beb21d",
+  "candidate_unchanged": true,
+  "evidence": {
+    "node": "v24.2.0",
+    "npm_ci": "exit 0; 87 packages; 0 reported vulnerabilities",
+    "npm_run_check": "exit 0; typecheck and 135 tests across 11 files passed",
+    "npm_run_build": "exit 0; Vite production build",
+    "e2e": "MVP_PORT=4205 npm run test:e2e: exit 0; 22 passed (9.1s), desktop and mobile viewport Chromium",
+    "independent_probe": "/Users/dikeda/workspace/mtg-card-scanner-research/qa-camera-geometry/probe.mjs: exit 0; six synthetic geometry/lifecycle checks passed",
+    "diff_check": "exit 0",
+    "reverse_patch_check": "git apply --reverse --check: exit 0 (read-only check)",
+    "static_security": "Added-line pattern scan: no hits; manually reviewed all seven candidate files, including untracked helper/tests/report; no new secret, injection sink, upload, or unexpected network path",
+    "identity": "Base HEAD, patch digest and SHA-256 of all seven candidate files unchanged before/after tests"
+  },
+  "limits": [
+    "Physical iPhone Safari / Android camera, real background transitions and sustained performance NOT RUN.",
+    "Independent probe uses canvas.captureStream plus a synthetic rejecting Worker; existing geometry E2E uses synthetic Y4M plus a synthetic rejecting Worker. These prove input/presentation/lifecycle, not real recognition.",
+    "Parent-reported real-model PNG 4/6 to 6/6 and Y4M 6/6 to 6/6 were read as implementation evidence, not independently rerun or claimed as real-device improvement.",
+    "Issue11 edge-to-edge file-input/detector and physical-device gates remain unresolved and outside this correction.",
+    "resizeMode none is an ideal preference and may be ignored; contract is the complete delivered frame, not guaranteed physical-sensor coverage."
+  ]
+}

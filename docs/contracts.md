@@ -85,7 +85,11 @@ The original implementation report preserves historical environment limitations.
   margin≥0.025. These are **uncalibrated conservative trial thresholds**, not
   an accuracy or probability claim. File-input repeats are deterministic repeats,
   not independent image samples. Detection uses four corners and perspective
-  warp; camera frame is the displayed guide plus padding, maximum 720×1003.
+  warp. Camera input is the complete delivered video frame, uniformly resized
+  to a maximum edge of 1024 without upscaling or source cropping (integer pixel
+  rounding allowed). Preview uses the delivered aspect ratio and contain so its
+  visible image agrees with inference input. Native resizeMode:none is an ideal
+  preference, not a guarantee about physical sensor modes on every browser.
 - Result fixation stops camera/inference. Visibility/pagehide stop camera tracks;
   pagehide also terminates worker. Resume requires the explicit camera button.
 - Remote content uses text nodes, never HTML injection. No image/embedding upload,
