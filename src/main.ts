@@ -12,6 +12,7 @@ import { formatReferencePrice } from './domain/pricing.js';
 import { Recognizer } from './recognition/adapter.js';
 import { LiveCandidate, type Suggestion } from './recognition/live-candidate.js';
 import { defaults, bounds, validateSettings, type RecognitionSettings } from './recognition/settings.js';
+import { SetBadge } from './ui/set-badge.js';
 import { CandidateMetadata } from './ui/candidate-metadata.js';
 import { DetectionOverlay } from './ui/detection-overlay.js';
 import { captureCameraFrame } from './ui/camera-geometry.js';
@@ -73,10 +74,11 @@ gear.append(gearOutline, gearHub); settingsButton.append(gear, el('span', '情�
 const actionPanel = el('section', '', 'action-panel'); actionPanel.append(scanActions);
 const tentativePanel = el('aside', '', 'tentative'); tentativePanel.hidden=true; tentativePanel.setAttribute('aria-label','もしかして？');
 const tentativeEnglish=el('p','','small');const tentativeExpansion=el('p','','small');const tentativePrice=el('div','','candidate-price');const tentativeFormats=new FormatLegality('candidate-format-disclosure');const tentativeReference=new ReferenceImage();
+const tentativeSet=new SetBadge();
 const tentativeName=el('strong'); const tentativeScore=el('span','','small');
 const tentativeMessage=el('p','','small'); const announcement=el('span','','sr-only'); announcement.setAttribute('role','status');
 const confirm=button('これです',()=>confirmSuggestion()); const dismiss=button('違う',()=>dismissSuggestion());
-const tentativeContent=el('div'); tentativeContent.append(el('span','もしかして？','eyebrow'),tentativeName,tentativeEnglish,tentativeExpansion,tentativeScore,tentativeMessage);
+const tentativeContent=el('div'); tentativeContent.append(el('span','もしかして？','eyebrow'),tentativeName,tentativeEnglish,tentativeSet.node,tentativeExpansion,tentativeScore,tentativeMessage);
 const tentativeActions=el('div','','actions'); tentativeActions.append(confirm,dismiss); const tentativeSummary=el('div','','candidate-summary'); tentativeSummary.append(tentativeReference.node,tentativeContent);
 const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='candidate-details';tentativeDetails.setAttribute('aria-label','候補の詳細');tentativeDetails.setAttribute('role','region');tentativeDetails.tabIndex=0;
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
@@ -221,7 +223,7 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {loadingSuggestion=null;snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
+function hideSuggestion():void {loadingSuggestion=null;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
@@ -243,6 +245,7 @@ function presentSuggestion(next: Suggestion | null):void {
   tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
   tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
   tentativeEnglish.textContent=`英語：${card.name}`;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
+  tentativeSet.update(card);
   tentativeExpansion.textContent=`${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
   tentativeMessage.textContent='実物の版・言語・加工は未確認';tentativeReference.update(card,next.faceIndex);tentativeFormats.update(card.id,card.legalities);renderCandidateRules(card,card.lang==='ja'?card:null);
   void candidateSession.select(card,finish);

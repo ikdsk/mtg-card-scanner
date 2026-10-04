@@ -80,3 +80,8 @@ html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 /* Retry can wrap without being clipped by the dock in short viewports. */
 #app .scan-panel:has(.action-panel button:not([hidden]):nth-child(3)){min-height:112px}
 #app .viewport header button{width:44px}
+
+/* Physical set badge stays in the compact candidate summary. */
+.candidate-set{display:flex;align-items:center;gap:5px;min-width:0;margin:0;font-size:.68rem;line-height:1;overflow-wrap:anywhere}
+.candidate-set img{flex:none;width:16px;height:16px;object-fit:contain}
+.candidate-set span{min-width:0}
