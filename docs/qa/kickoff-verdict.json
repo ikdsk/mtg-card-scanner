@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    "SUG-01: src/domain/pricing.ts:5 / docs/contracts.md:14 — ISO timestampのtimezone必須性・offset範囲・秒省略・24:00等をadapter接続前に明文化する。現仕様で未決のため違反とは断定しない。実測入力と結果はkickoff-review.md参照。",
+    "SUG-02: src/domain/selection.ts:11,15,19,27 — generation/revisionの安全整数領域と上限時方針を定義する。手動構築したrevision=9007199254740992ではoverride後も同値となり旧tokenを受理する実測あり。通常生成状態での欠陥とは区別した設計保留。再現コマンドはkickoff-review.md参照。",
+    "SUG-03: docs/contracts.md:30-37 — quote鮮度・版/言語/加工一致・型外入力検証はfuture adapterの必須責務。純粋formatterやbootstrap tokenだけで実市場の正確性を承認しない。",
+    "再現性: QAは既存専用worktree依存でnpm run checkを独立実行し、型検査と4files/103tests成功。fresh npm ci、GitHub CIの対象SHA、private設定、Obsidian同期は本QAでNOT RUN。",
+    "公開ゲート: UI・実カメラ・live price/FX・実画像認識・iPhone/Android実機性能はNOT RUN。モデル等の採用許諾・公開承認も別途必要。MVP公開はBLOCKED。"
+  ],
+  "summary": "固定SHA 2a7bbd6510c1ef7b50e8d004f1667042be7356fa の独立QAはbootstrap純粋ドメインに限りPASS。npm run checkはexit 0、型検査PASS、4files/103tests PASS、追加3assertions PASS、静的検査でブロッキングな安全/ロジック欠陥なし。passedはP0全出口やMVP公開承認ではない。証拠・設計保留・NOT RUNはdocs/qa/kickoff-review.md。"
+}
