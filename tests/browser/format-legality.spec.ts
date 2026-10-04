@@ -110,9 +110,18 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
-for (const width of [320, 390, 440]) {
-  test(`candidate reuses uniform format badges at ${width}px (SYNTHETIC)`, async ({ page }, testInfo) => {
+for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
+  test(`candidate reuses uniform format badges at ${width}px ${dfc ? 'long DFC' : 'single face'} (SYNTHETIC)`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: width === 320 ? 740 : width === 390 ? 844 : 780 });
+    const front = 'Synthetic Delver of the Very Long Unabridged Secrets';
+    const back = 'Synthetic Insectile Aberration with a Very Long Full Face Name';
+    if (dfc) {
+      const double = { ...card, image_uris: undefined, name: `${front} // ${back}`, card_faces: [
+        { name: front, image_uris: card.image_uris },
+        { name: back, image_uris: { normal: 'https://cards.scryfall.io/normal/back/a/b/synthetic.jpg' } },
+      ] };
+      await page.route('https://api.scryfall.com/**', route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/search') ? { data: [double], has_more: false } : double }));
+    }
     await page.addInitScript(() => {
       navigator.mediaDevices.getUserMedia = async () => {
         const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
@@ -135,7 +144,7 @@ for (const width of [320, 390, 440]) {
     await page.goto('/');
     await closeRoute(page);
     await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
-    await expect(page.locator('.tentative')).toContainText('Synthetic Formats');
+    await expect(page.locator('.tentative')).toContainText(dfc ? front : 'Synthetic Formats');
     const badges = page.locator('.candidate-summary .format-icons button');
     await expect(page.locator('.tentative .format-legality')).toHaveCount(1);
     await expect(badges).toHaveCount(7);
@@ -145,6 +154,10 @@ for (const width of [320, 390, 440]) {
     await expect(page.locator('.candidate-set')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-summary img').first()).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-price .price')).toHaveText('概算 ￥0');
+    await expect(page.locator('.candidate-price .price')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.candidate-price .usd')).toBeInViewport({ ratio: 1 });
+    expect(await page.locator('.candidate-summary').evaluate(node => node.scrollTop)).toBe(0);
+    if (dfc) await expect(page.locator('.candidate-summary .reference-image .actions')).toBeHidden();
     expect(await page.locator('.candidate-summary').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight)).toBe(true);
     expect(await page.locator('.candidate-price').evaluate(node => [...node.children].every(child => child.getBoundingClientRect().bottom <= document.querySelector('.candidate-summary .format-legality')!.getBoundingClientRect().top))).toBe(true);
     await expect(badges.locator('.format-badge')).toHaveText(['スタン', 'パイオニア', 'モダン', 'レガシー', 'ヴィンテ', '統率者', 'パウパー']);
@@ -165,6 +178,15 @@ for (const width of [320, 390, 440]) {
     await page.keyboard.press('Space');
     await expect(page.locator('#candidate-format-disclosure')).toBeHidden();
     await page.getByRole('button', { name: '候補パネルを拡大', exact: true }).click();
+    if (dfc) {
+      const faces = page.locator('.candidate-summary .reference-image button');
+      await expect(page.locator('.candidate-summary>div>p').first()).toHaveText(`英語：${front} // ${back}`);
+      expect(await page.locator('.candidate-summary>div>p').first().evaluate(node => node.scrollHeight <= node.clientHeight)).toBe(true);
+      await expect(faces).toHaveText([`表面：${front}`, `裏面：${back}`]);
+      await faces.nth(1).click();
+      await expect(page.locator('.candidate-summary .reference-image img')).toHaveAttribute('src', /back/);
+      await expect(faces.nth(1)).toHaveAttribute('aria-pressed', 'true');
+    }
     await expect(page.locator('.tentative .format-legality')).toHaveCount(1);
     await expect(badges).toHaveCount(7);
     for (const badge of await badges.all()) await expect(badge).toBeInViewport({ ratio: 1 });

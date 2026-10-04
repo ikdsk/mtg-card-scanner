@@ -31,6 +31,7 @@ for(const language of ['en','ja'] as const)test(`DFC Japanese face names use usa
 test('recognized back initializes image; manual switch survives same-face observations and price; new face replaces version',async({page})=>{
  await install(page);await page.goto('/');await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await closeRoute(page);await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
  const image=page.locator('.tentative img');await expect(image).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
+ await page.getByRole('button',{name:'候補パネルを拡大',exact:true}).click();
  await page.locator('.tentative').getByRole('button',{name:/^表面：/}).click();await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await page.waitForTimeout(800);await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=0;});await page.waitForTimeout(400);

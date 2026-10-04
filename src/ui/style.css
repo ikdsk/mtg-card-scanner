@@ -89,3 +89,14 @@ html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 #app .action-panel .scan-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .scan-toggle svg{flex:none}
 .candidate-summary>.format-legality{grid-column:1/-1;grid-row:3;margin:0;width:100%;min-width:0}.candidate-summary>.format-legality>p.small:first-child{display:none}.candidate-summary .format-badge{overflow-wrap:normal}.candidate-summary .format-disclosure{font-size:10px;line-height:1.3;margin:3px 0}
+
+/* Face names can make the image's grid row arbitrarily tall. Keep face
+   switching in the expanded panel and bound compact identity text only. */
+.candidate-dock[data-expanded=false] .candidate-summary .reference-image .actions{display:none}
+.candidate-dock[data-expanded=false] .candidate-summary>div:not(.candidate-price)>strong,
+.candidate-dock[data-expanded=false] .candidate-summary>div:not(.candidate-price)>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* Expanded face controls use the full summary width, so full names wrap
+   naturally rather than setting the height of the narrow image column. */
+.candidate-dock[data-expanded=true] .candidate-summary .reference-image{display:contents}
+.candidate-dock[data-expanded=true] .candidate-summary .reference-region{grid-column:1;grid-row:1}
+.candidate-dock[data-expanded=true] .candidate-summary .reference-image .actions{grid-column:1/-1;grid-row:4;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
