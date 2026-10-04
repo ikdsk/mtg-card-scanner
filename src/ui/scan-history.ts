@@ -1,6 +1,6 @@
 import { el, button } from './dom.js';
 import { referenceFaces, safeScryfallUrl } from './reference-image.js';
-import type { ScanHistoryEntry } from './scan-history-model.js';
+import type { ScanHistoryEntry, PendingScanHistoryEntry } from './scan-history-model.js';
 import './scan-history.css';
 export class ScanHistoryView {
   readonly node = el('section', '', 'panel scan-history');
@@ -12,7 +12,7 @@ export class ScanHistoryView {
     this.node.setAttribute('aria-labelledby', heading.id);
     this.node.append(heading, el('p', `最新${limit}件まで。このタブ内のみ・再読み込みで消えます。`, 'small muted'), this.list);
   }
-  update(entries: ScanHistoryEntry[]): void {
+  update(entries: (ScanHistoryEntry | PendingScanHistoryEntry)[]): void {
     this.node.hidden = entries.length === 0;
     const retained = new Set(entries.map(entry => entry.generation));
     for (const [id, row] of this.rows) if (!retained.has(id)) { row.node.remove(); this.rows.delete(id); }
@@ -22,10 +22,18 @@ export class ScanHistoryView {
       if (!row || row.signature !== signature) {
         const focused = row?.node.contains(document.activeElement);
         const node = el('li'); const card = entry.card;
+        if (!card) {
+          const pending = el('div', '', 'scan-history-row');
+          pending.append(el('strong', `認識候補 · ${entry.cardId}`), el('p', entry.status, 'small muted'));
+          node.append(pending); row?.node.replaceWith(node); row = {node,signature}; this.rows.set(entry.generation,row);
+          if (this.list.children[index] !== node) this.list.insertBefore(node,this.list.children[index] ?? null);
+          return;
+        }
+        const resolved = entry as ScanHistoryEntry;
         const name = card.printed_name ?? card.name;
-        const finish = { nonfoil: '通常', foil: 'Foil', etched: 'Etched' }[entry.finish] ?? entry.finish;
+        const finish = { nonfoil: '通常', foil: 'Foil', etched: 'Etched' }[resolved.finish] ?? resolved.finish;
         const selection = `${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
-        const control = button('', () => this.reopen(entry), 'scan-history-row');
+        const control = button('', () => this.reopen(resolved), 'scan-history-row');
         control.setAttribute('aria-label', `${name} · ${selection} を開く`);
         const thumbnail = el('span', '', 'scan-history-thumbnail');
         // Same host/protocol validation as the main reference image, full card only.

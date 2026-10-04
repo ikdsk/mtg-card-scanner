@@ -42,3 +42,11 @@ it('settles FX state even when the card provider fails (SYNTHETIC)', async () =>
   await s.select(card, 'nonfoil');
   expect(s.value.error).toBe('Card failure'); expect(s.value.loading).toBe(false); expect(s.value.fxError).toBe(true);
 });
+it('new continuous event generation rejects delayed old price and FX (SYNTHETIC)', async () => {
+ const loads: ((c: typeof card)=>void)[]=[]; const rates: ((r:{jpyPerUsd:number;asOf:string})=>void)[]=[];
+ const s=new ResultSession(()=>new Promise(resolve=>loads.push(resolve)),()=>new Promise(resolve=>rates.push(resolve)),()=>{});
+ s.reset();const a=s.select(card,'foil');s.reset();const b=s.select({...card,id:'b',oracle_id:'oracle-b'},'nonfoil');
+ loads[1]!({...card,id:'b',oracle_id:'oracle-b',prices:{usd:'3.00'}});rates[1]!({jpyPerUsd:150,asOf:'2026-10-02'});await b;
+ loads[0]!({...card,prices:{usd_foil:'99.00'}});rates[0]!({jpyPerUsd:200,asOf:'2026-10-02'});await a;
+ expect(s.value.card?.id).toBe('b');expect(s.value.quote).toBe('3.00');expect(s.value.fx?.jpyPerUsd).toBe(150);
+});

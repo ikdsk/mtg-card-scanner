@@ -121,8 +121,8 @@ test('history remains in document while camera runs; reopening stops it and neve
   await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
   await expect(page.locator('.scan-history-row')).toHaveCount(2);
   await expect(page.locator('.scan-history-row').first()).toContainText('Synthetic Beta');
-  await expect(page.locator('.result h2')).toBeInViewport();
-  await expect(page.getByRole('button', { name: '停止', exact: true })).toBeDisabled();
+  // Live acceptance preserves the camera and does not reveal/scroll the result.
+  await expect(page.getByRole('button', { name: '停止', exact: true })).toBeEnabled();
 });
 test('101 deliberate scans retain only the newest 100 rows', async ({ page }) => {
   test.setTimeout(90000);

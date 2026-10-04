@@ -6,7 +6,7 @@ import { join } from 'node:path';
 // SYNTHETIC I420 camera, SYNTHETIC rejecting worker. Tests presentation/input
 // geometry and lifecycle only; real inference evidence is in the private probe.
 for (const [width, height] of [[1280, 720], [720, 1280]]) {
-  test(`full ${width}×${height} fake camera agrees with preview and stops`, async ({ baseURL, viewport }) => {
+  test(`full ${width}×${height} fake camera agrees with preview and stops`, async ({ baseURL, viewport }, info) => {
     const directory = await mkdtemp(join(tmpdir(), 'camera-geometry-'));
     const path = join(directory, 'synthetic.y4m');
     const y = Buffer.alloc(width! * height!);
@@ -17,11 +17,11 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
     await writeFile(path, Buffer.concat([Buffer.from(`YUV4MPEG2 W${width} H${height} F5:1 Ip A1:1 C420\n`), frame, frame, frame]));
     const browser = await chromium.launch({ channel: 'chromium', args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-video-capture=${path}`] });
     try {
-      const context = await browser.newContext({ permissions: ['camera'], viewport: viewport ?? { width: 390, height: 844 }, serviceWorkers: 'block' });
+      const context = await browser.newContext({ permissions: ['camera'], viewport: viewport ?? { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
       await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
       const page = await context.newPage();
       await page.addInitScript(() => {
-        const probe = { inputs: [] as { width: number; height: number; pixels: number[] }[], tracks: [] as MediaStreamTrack[] };
+        const probe = { inputs: [] as { width: number; height: number; pixels: number[] }[], tracks: [] as MediaStreamTrack[], result: { type: 'result', cardPresent: false, cornersValid: false, score: 0, margin: 0, corners: [] as number[][] } };
         Object.assign(window, { geometryProbe: probe });
         class SyntheticRejectingWorker {
           onmessage: ((event: { data: unknown }) => void) | null = null;
@@ -32,7 +32,7 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
               probe.inputs.push({ width: canvas.width, height: canvas.height, pixels: [[10, 10], [canvas.width - 10, 10], [10, canvas.height - 10], [canvas.width - 10, canvas.height - 10]].map(([x, y]) => ctx.getImageData(x!, y!, 1, 1).data[0]!) });
               data.bitmap.close();
             }
-            setTimeout(() => this.onmessage?.({ data: data.type === 'init' ? { type: 'ready', catalogVersion: 52 } : { type: 'result', cardPresent: false, cornersValid: false, score: 0, margin: 0 } }), 0);
+            setTimeout(() => this.onmessage?.({ data: data.type === 'init' ? { type: 'ready', catalogVersion: 52 } : probe.result }), 0);
           }
           terminate() {}
         }
@@ -48,7 +48,25 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
         return { width: v.videoWidth, height: v.videoHeight, ratio: rect.width / rect.height, fit: getComputedStyle(v).objectFit };
       });
       expect(preview.fit).toBe('contain');
-      expect(preview.ratio).toBeCloseTo(preview.width / preview.height, 2);
+      // Stable half-viewport region letterboxes the unchanged full sensor frame.
+      expect(preview.ratio).toBeGreaterThan(0);
+      await page.evaluate(() => { const p=(window as any).geometryProbe; p.result={...p.result,cardPresent:true,cornersValid:true,corners:[[.1,.1],[.9,.1],[.9,.9],[.1,.9]]}; });
+      await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','true');
+      for (const size of [viewport ?? {width:390,height:844},{width:844,height:390}]) {
+        await page.setViewportSize(size);
+        await expect.poll(() => page.locator('.detection-overlay').evaluate(node => {
+          const c=node as HTMLCanvasElement,v=document.querySelector('video')!,r=c.getBoundingClientRect(),d=devicePixelRatio;
+          const scale=Math.min(r.width/v.videoWidth,r.height/v.videoHeight);
+          const x=((r.width-v.videoWidth*scale)/2+.1*v.videoWidth*scale)*d;
+          const y=((r.height-v.videoHeight*scale)/2+.1*v.videoHeight*scale)*d;
+          const pixels=c.getContext('2d')!.getImageData(Math.round(x)-3,Math.round(y)-3,7,7).data;
+          return c.width===Math.round(r.width*d) && Array.from({length:49},(_,i)=>i*4).some(i=>pixels[i]===34 && pixels[i+1]===197 && pixels[i+2]===94);
+        })).toBe(true);
+      }
+      await page.screenshot({path:info.outputPath(`overlay-${width}x${height}-dpr2-rotated.png`)});
+      await page.evaluate(() => { const p=(window as any).geometryProbe; p.result.corners=[[0,0],[2,0],[1,1],[0,1]]; });
+      await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','false');
+      await page.setViewportSize(viewport ?? {width:390,height:844});
       const input = await page.evaluate(() => (window as unknown as { geometryProbe: { inputs: { width: number; height: number; pixels: number[] }[] } }).geometryProbe.inputs[0]!);
       expect(Math.max(input.width, input.height)).toBe(1024);
       expect(input.width / input.height).toBeCloseTo(width! / height!, 2);

@@ -1,6 +1,6 @@
 import { manifest } from './manifest.js';
 import type { Candidate } from './gate.js';
-export type RecognitionResult = Candidate & { margin: number; timing?: Record<string, number> };
+export type RecognitionResult = Candidate & { margin: number; corners?: unknown; scryfallOracleId?: string; timing?: Record<string, number> };
 export class Recognizer {
   private worker: Worker | null = null;
   private ready: Promise<void> | null = null;

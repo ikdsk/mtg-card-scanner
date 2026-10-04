@@ -40,7 +40,7 @@ test('compact real result sheet and stopped camera retain controls, rules and fo
   await page.locator('.search-results button').click();
   await expect(page.locator('.result-heading h2')).toBeInViewport();
   await expect(page.locator('.camera-status')).toContainText('カメラは停止中');
-  expect((await page.locator('.viewport').boundingBox())!.height).toBeLessThanOrEqual(96);
+  expect((await page.locator('.viewport').boundingBox())!.height).toBeGreaterThanOrEqual(300);
   await expect(page.locator('.price')).toHaveText('価格を取得中…');
   await page.screenshot({ path: info.outputPath(`${info.project.name}-loading.png`) });
   await page.getByLabel('加工', { exact: true }).focus(); const y = await page.evaluate(() => scrollY);
