@@ -31,10 +31,11 @@ test('manual JP/EN search, Japanese display, exact edition/language/finish and n
   await page.goto('/'); await page.getByRole('searchbox').fill('稲妻'); await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
   await expect(page.getByRole('heading', { name: '稲妻', exact: true, level: 2 })).toBeVisible();
-  await expect(page.locator('.price')).toHaveText('$0.00'); await expect(page.locator('.yen')).toHaveText('概算 ￥0');
-  await page.getByLabel('加工', { exact: true }).selectOption('foil'); await expect(page.locator('.price')).toHaveText('$2.00');
-  await page.getByLabel('印刷版', { exact: true }).selectOption('en2'); await expect(page.locator('.price')).toHaveText('$4.00'); await expect(page.locator('.target')).toContainText('ALT #2 · en · Foil');
+  await expect(page.locator('.usd')).toHaveText('$0.00 USD'); await expect(page.locator('.yen')).toHaveText('概算 ￥0');
+  await page.getByLabel('加工', { exact: true }).selectOption('foil'); await expect(page.locator('.usd')).toHaveText('$2.00 USD');
+  await page.getByLabel('印刷版', { exact: true }).selectOption('en2'); await expect(page.locator('.usd')).toHaveText('$4.00 USD'); await expect(page.locator('.target')).toContainText('ALT #2 · en · Foil');
   await page.getByLabel('選択版の言語').selectOption('ja'); await expect(page.locator('.price')).toHaveText('この版・言語・加工の価格なし'); await expect(page.locator('.target')).toContainText('ja · Foil');
+  await page.getByText('カード本文・ルール', { exact: true }).click();
   await expect(page.getByText('合成の日本語印刷本文')).toBeVisible(); await expect(page.getByText('Synthetic English rules')).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth); expect(overflow).toBe(false);
 });
@@ -51,7 +52,7 @@ test('camera permission denial leaves manual search usable', async ({ page }) =>
 test('FX error keeps USD and no invented yen', async ({ page }) => {
   await page.route('https://api.frankfurter.dev/**', route => route.fulfill({ status: 503, json: { error: 'SYNTHETIC' } }));
   await page.goto('/'); await page.getByRole('searchbox').fill('Bolt'); await page.getByRole('button', { name: '検索', exact: true }).click(); await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.locator('.price')).toHaveText('$0.00'); await expect(page.getByText('為替を取得できません。USDのみ表示します。')).toBeVisible(); await expect(page.locator('.yen')).toHaveCount(0);
+  await expect(page.locator('.usd')).toHaveText('$0.00 USD'); await expect(page.getByText('為替を取得できません。USDのみ表示します。')).toBeVisible(); await expect(page.locator('.yen')).toHaveCount(0); await expect(page.locator('.price')).toHaveText('概算JPYは利用できません');
 });
 
 test('worker retains init sent while runtime module import is pending (SYNTHETIC runtime)', async ({ page, context }) => {
@@ -117,7 +118,7 @@ test('new manual result enters viewport once; delayed updates preserve scroll, f
   await expect(page.getByRole('button', { name: 'スキャンに戻る', exact: true })).toBeInViewport();
   await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
   await page.getByLabel('加工', { exact: true }).selectOption('foil');
-  await expect(page.locator('.price')).toHaveText('$2.00');
+  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
   await page.getByLabel('加工', { exact: true }).focus();
   await page.evaluate(() => window.scrollTo(0, 0));
   const before = await page.evaluate(() => scrollY);
@@ -163,7 +164,7 @@ test('printing-list and price refresh rerenders keep user position and focus (SY
   await page.goto('/'); await page.getByRole('searchbox').fill('Bolt');
   await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.locator('.price')).toHaveText('$0.00');
+  await expect(page.locator('.usd')).toHaveText('$0.00 USD');
   await page.getByLabel('加工', { exact: true }).focus();
   await page.evaluate(() => scrollTo(0, 0));
   release();
@@ -172,7 +173,7 @@ test('printing-list and price refresh rerenders keep user position and focus (SY
   await expect(page.getByLabel('加工', { exact: true })).toBeFocused();
   await page.getByRole('button', { name: '価格・為替を再確認', exact: true }).click();
   const position = await page.evaluate(() => scrollY);
-  await expect(page.locator('.price')).toHaveText('$0.00');
+  await expect(page.locator('.usd')).toHaveText('$0.00 USD');
   await expect(page.locator('.yen')).toHaveText('概算 ￥0');
   expect(await page.evaluate(() => scrollY)).toBe(position);
   await expect(page.getByRole('button', { name: '価格・為替を再確認', exact: true })).toBeFocused();

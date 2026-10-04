@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    "Non-blocking test portability: new browser screenshot destinations are absolute paths to the implementer's research directory. Consider an environment-configurable artifact root in a future test-only cleanup; no product change is needed for this candidate."
+  ],
+  "summary": "PASS for the fixed Issue 18 combined UI candidate: independent npm ci, typecheck, 143 unit/regression tests, production build, 64 Chromium E2E cases and an additional synthetic security/history-race probe passed; all 19 candidate file identities and the supplied patch remained unchanged. This is not physical-device, performance, live-recognition or release approval.",
+  "candidate": {
+    "worktree": "/Users/dikeda/workspace/mtg-card-scanner-worktrees/qa-combined-camera-ui",
+    "head": "eb321dcbdf7a26f2302de1e2e1355dae93953584",
+    "branch_state": "detached HEAD; candidate changes remain uncommitted and unstaged",
+    "patch": "/Users/dikeda/workspace/mtg-card-scanner-research/combined-camera-ui-review.patch",
+    "patch_sha256": "8d44e1e15108289845175b9aeccb336566673a82fbc6f9420d70ced6c5446cb3",
+    "candidate_file_count": 19,
+    "identities_unchanged": true,
+    "reverse_patch_check": "passed"
+  },
+  "verification": {
+    "requirements": "Read GitHub Issue 18 and all 6 comments via REST, including JPY primary, accessible format icons and bounded tab-memory history additions.",
+    "npm_ci": "passed; 87 packages added, 0 audit vulnerabilities",
+    "npm_run_check": "passed; typecheck and 143 tests in 14 files",
+    "npm_run_build": "passed; 21 modules; JS 35.12 kB (gzip 13.65 kB), CSS 7.95 kB (gzip 2.46 kB)",
+    "e2e_command": "MVP_PORT=4231 npm run test:e2e",
+    "e2e": "64 passed, 27.9 seconds, Chromium desktop and mobile viewport",
+    "additional_probe": "passed: failed metadata creates no history; literal hostile text remains inert; unsafe images rejected; missing FX preserves zero USD; older reopen rejects delayed scan metadata; subsequent override updates the original event only; no camera calls, no unexpected network requests, no page errors; 320px no overflow; reload clears history",
+    "test_preservation": "All baseline literal test names retained (81 parsed); no recognition/domain/data/session/camera-geometry/dependency/config changes. Existing assertion changes preserve exact USD values and add the rules-disclosure click; no weakened assertions found.",
+    "security_scan": "Tracked added lines plus complete untracked additions scanned; no hardcoded secrets, dangerous eval/exec, unsafe HTML insertion or new product persistence/network calls. Only storage keyword hit was explanatory report prose.",
+    "git_diff_check": "passed",
+    "visual_inspection": "Opened newly rerun 390px initial/history, 320px result, 1280px desktop result and independent 320px probe screenshots. No overlap or horizontal clipping; monochrome shell, prominent approximate JPY, differentiated format badges and normally scrolling history confirmed.",
+    "cleanup": "Only own 4231 probe preview stopped; no listener on 4231 afterwards; no access/change to live 4195. No product edits, staging, commit, push or deploy."
+  },
+  "evidence_directory": "/Users/dikeda/workspace/mtg-card-scanner-research/qa-combined-camera-ui",
+  "limitations": [
+    "Synthetic workers, input pixels, provider prices, FX and images are explicitly test fixtures, not actual recognition or live-provider proof.",
+    "Physical iPhone Safari/Android camera and real-device startup, scan latency, memory, thermal and background behavior remain NOT RUN.",
+    "No models, private photographs or credentials downloaded or used; no public deployment or all-MVP acceptance claimed."
+  ]
+}

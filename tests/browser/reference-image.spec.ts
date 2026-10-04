@@ -39,17 +39,17 @@ test('DFC face remains selected through prices/FX and resets on identity change;
   const back = page.getByRole('button', { name: '裏面：Synthetic Back', exact: true }); await back.click();
   await expect(back).toHaveAttribute('aria-pressed', 'true');
   await page.getByLabel('加工', { exact: true }).selectOption('foil');
-  await expect(page.locator('.price')).toHaveText('$2.00');
+  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('back').normal);
   await page.getByRole('button', { name: '価格・為替を再確認', exact: true }).click();
   await expect(page.locator('.yen')).toHaveText('概算 ￥300');
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('back').normal);
   await page.getByLabel('印刷版', { exact: true }).selectOption('image-none');
   await expect(page.locator('.reference-image')).toContainText('この面の参照画像はありません');
-  await expect(page.locator('.price')).toHaveText('$2.00');
+  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
   await page.getByLabel('印刷版', { exact: true }).selectOption('image-error');
   await expect(page.locator('.reference-image')).toContainText('参照画像を読み込めません');
-  await expect(page.locator('.price')).toHaveText('$2.00');
+  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
   await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
   await expect(page.getByRole('button', { name: '表面：Synthetic Front', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -57,7 +57,7 @@ test('DFC face remains selected through prices/FX and resets on identity change;
 test('delayed image never gates prices or shifts reserved layout/focus/scroll; stale events cannot restore image', async ({ page }, info) => {
   let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://cards.scryfall.io/**', async route => { await wait; await route.fulfill({ contentType: 'image/svg+xml', body: svg }); });
-  await open(page); await expect(page.locator('.price')).toHaveText('$1.00');
+  await open(page); await expect(page.locator('.usd')).toHaveText('$1.00 USD');
   await expect(page.locator('.yen')).toHaveText('概算 ￥150');
   const before = await page.locator('.reference-region').boundingBox();
   await page.getByLabel('加工', { exact: true }).focus(); await page.evaluate(() => scrollTo(0, 0));
@@ -98,7 +98,7 @@ test('reversed card responses and next scan cannot restore an old reference (SYN
   await page.getByRole('button', { name: /Synthetic Front.*TST/ }).click();
   await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(4);
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
-  release(); await expect(page.locator('.price')).toHaveText('$1.00');
+  release(); await expect(page.locator('.usd')).toHaveText('$1.00 USD');
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: async () => { throw new DOMException('SYNTHETIC denial', 'NotAllowedError'); } } });
@@ -129,7 +129,7 @@ test('recognized result shows reference before a delayed image finishes (SYNTHET
   await page.locator('#local-image').setInputFiles({ name: 'SYNTHETIC-frame.png', mimeType: 'image/png', buffer: Buffer.from(bytes, 'base64') });
   await expect(page.locator('.result h2')).toBeInViewport();
   await expect(page.locator('.reference-image')).toContainText('参照画像を読み込み中');
-  await expect(page.locator('.price')).toHaveText('$1.00');
+  await expect(page.locator('.usd')).toHaveText('$1.00 USD');
   release(); await expect(page.locator('.reference-image img')).toBeVisible();
 });
 test('late FX update keeps back face, image DOM, focus and scroll (SYNTHETIC)', async ({ page }) => {
@@ -137,7 +137,7 @@ test('late FX update keeps back face, image DOM, focus and scroll (SYNTHETIC)', 
   await page.route('https://api.frankfurter.dev/**', async route => { await pending; await route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }); });
   await open(page); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
   await page.getByRole('button', { name: '裏面：Synthetic Back', exact: true }).click();
-  await expect(page.locator('.price')).toHaveText('$1.00');
+  await expect(page.locator('.usd')).toHaveText('$1.00 USD');
   await expect(page.locator('.reference-image img')).toBeVisible();
   await page.evaluate(() => { (window as unknown as { retained: Element | null }).retained = document.querySelector('.reference-image img'); scrollTo(0, 0); });
   release(); await expect(page.locator('.yen')).toHaveText('概算 ￥150');
