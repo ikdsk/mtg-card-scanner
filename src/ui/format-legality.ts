@@ -1,12 +1,12 @@
 import { el, button } from './dom.js';
 const formats = [
-  ['standard', 'Standard', 'スタンダード', 'S'],
-  ['pioneer', 'Pioneer', 'パイオニア', 'P'],
-  ['modern', 'Modern', 'モダン', 'M'],
-  ['legacy', 'Legacy', 'レガシー', 'L'],
-  ['vintage', 'Vintage', 'ヴィンテージ', 'V'],
-  ['commander', 'Commander', '統率者', 'C'],
-  ['pauper', 'Pauper', 'パウパー', 'Pa'],
+  ['standard', 'Standard', 'スタンダード', 'スタン'],
+  ['pioneer', 'Pioneer', 'パイオニア', 'パイオニア'],
+  ['modern', 'Modern', 'モダン', 'モダン'],
+  ['legacy', 'Legacy', 'レガシー', 'レガシー'],
+  ['vintage', 'Vintage', 'ヴィンテージ', 'ヴィンテ'],
+  ['commander', 'Commander', '統率者', '統率者'],
+  ['pauper', 'Pauper', 'パウパー', 'パウパー'],
 ] as const;
 type Status = 'legal' | 'banned' | 'not_legal' | 'restricted' | 'unknown';
 const explanations: Record<Status, string> = {
@@ -21,7 +21,7 @@ export function formatStatuses(legalities?: Readonly<Record<string, string>>) {
   });
 }
 // Persistent disclosure and controls: price refreshes do not reset focus/open state.
-// Letter badges are app-made navigation aids, never official format marks.
+// Text badges are app-made navigation aids, never official format marks.
 export class FormatLegality {
   constructor(private readonly disclosureId = 'format-disclosure') {}
   readonly node = el('section', '', 'format-legality');
