@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    {
+      "id": "release-scope",
+      "details": "本判定はmvp-fix2コード差分のみの承認。既知の認識精度Issue11は未解決であり、MVP製品受入・公開承認は不可／別判定。合成provider/workerとChromium viewport検証を実カード認識・実機検証と同一視しない。"
+    }
+  ],
+  "summary": "227e745 + SHA256 ed7f21f97c2db2dd2342bed73b55b828426f0fec914a79080a4953b48fef39f2 の4ファイル差分は合格。保存失敗後の旧v51保持・新規clientの更新503時fallback、新カード結果の可視化、非同期更新でのスクロール・フォーカス維持を独立確認。130 tests、build、18 E2E成功。製品受入はIssue11未解決のため承認しない。"
+}

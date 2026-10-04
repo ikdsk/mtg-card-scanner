@@ -1,0 +1,125 @@
+{
+  "passed": false,
+  "security_concerns": [],
+  "logic_errors": [
+    {
+      "id": "R1",
+      "severity": "P1",
+      "file": "src/data/http.ts",
+      "lines": "9, 20",
+      "title": "ブラウザ標準fetchをJsonClientのthisで呼び、全データ取得が失敗する",
+      "reproduction": "通常ブラウザで名前検索、カード取得、FX取得を実行。親の候補実行ではPlaywright 6件全失敗、Illegal invocation。独立レビューでもthis.fetcher(url, ...)という不正receiverを確認。",
+      "actual": "Scryfall/FX経路が使えず、認識後の結果表示も成立しない。",
+      "expected": "実ブラウザ標準fetchで取得できる。",
+      "fix": "保存時にglobalThisへbindするか、関数をローカル変数へ取り出して呼び出す。モックだけでなくnative fetchを使うブラウザ回帰試験を通す。",
+      "evidence": "ソース独立確認。ブラウザ6 FAILは親から受領した結果であり本レビューで再実行していない。"
+    },
+    {
+      "id": "R7",
+      "severity": "P1",
+      "file": "src/data/http.ts; src/data/repository.ts; docs/contracts.md",
+      "lines": "http.ts:9, 13-21; repository.ts:46-55; contracts.md:61-63",
+      "title": "Scryfall検索500ms制限と429後30秒停止を実装していない",
+      "reproduction": "高速な合成HTTP応答で検索page1→page2、または429→ユーザー再試行を行いfetch開始時刻を計測する。実サービスへ過負荷試験はしない。",
+      "actual": "独立probeで検索開始間隔111ms、429後の再試行も111ms。printingsの全ページ取得は/cards/searchを連続使用するため通常操作でhard limitを超過し得る。一律110msとエラー文だけで、cooldown状態はない。",
+      "expected": "/cards/searchは500ms以上、その他対象endpointも公式別制限を満たし、429後は少なくとも30秒アクセスを止める。",
+      "fix": "endpoint別の共有スケジューラとprovider単位cooldownUntilを導入し、検索・ページング・手動再試行を全て通す。500ms/30秒に余裕を持たせ、Retry-Afterもあれば尊重。待機中abort、別操作からの再送抑止をfake clockで試験し、contracts/noticesの110ms記述を更新。",
+      "evidence": "2026-10-04に公式 https://scryfall.com/docs/api/rate-limits を独立HTTP取得して確認：search/named/random/collection各2/sec(500ms)、other10/sec、429後30秒。mvp-review-1-probe.mjsでsearch-start-gap=111ms、429-retry-gap=111ms。mvp-release-risks.mdとも照合。"
+    },
+    {
+      "id": "R2",
+      "severity": "P1",
+      "file": "src/main.ts",
+      "lines": "163-173, 187-190",
+      "title": "名前検索への切替が保留中の認識カード取得を無効化しない",
+      "reproduction": "認識候補確定→openIdのrepo.cardを遅延→ユーザーが訂正の名前検索を開始→旧card応答を解放する。",
+      "actual": "searchはscanGenerationだけ進めdetailGeneration/detailRequestを変更しないため、旧openIdがopenCardを実行し旧候補を結果として復活させる。検索へ戻る意図に反し、古い認識応答を採用する。",
+      "expected": "検索へ切り替えた時点で古い認識由来の詳細取得を破棄する。",
+      "fix": "search開始時にdetailGenerationを進めdetailRequestをabortし、必要に応じ結果セッションもリセット。scan/search/detailを横断する操作世代を導入し、遅延応答のE2Eを追加。",
+      "evidence": "制御フローの静的確認。実ブラウザ再現は未実行。"
+    },
+    {
+      "id": "R3",
+      "severity": "P1",
+      "file": "scripts/prepare-assets.mjs",
+      "lines": "29-30",
+      "title": "ローカル資産準備が存在しないONNX Runtime LICENSE URLで必ず失敗する",
+      "reproduction": "npm run assets:prepareの最後のURL https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/LICENSE を取得。",
+      "actual": "独立HTTP実測404。スクリプトはexitCode=1となり、ランタイムのLICENSEも保存されない。",
+      "expected": "再現可能な準備手順が成功し、正しいライセンス／必要なthird-party noticesを同梱する。",
+      "fix": "1.24.3の実際の配布物または対応する固定上流commitから正しいLICENSEと必要な通知を取得する。存在と内容／固定hashを確認し、クリーン状態のassets:prepareを再実行。単に失敗を握りつぶさない。",
+      "evidence": "mvp-review-1-probe.mjsでHTTP404を独立確認。"
+    },
+    {
+      "id": "R4",
+      "severity": "P2",
+      "file": "src/data/http.ts; src/data/repository.ts",
+      "lines": "http.ts:22-25; repository.ts:34, 42-44, 63",
+      "title": "意味的に不正なHTTP200応答を長期キャッシュし再試行が復旧しない",
+      "reproduction": "card APIにHTTP200 {id:\"malformed\"}を一度返し、同一カードを再取得する。上流は2回目には正常応答できる条件にする。",
+      "actual": "独立合成probeで2回とも「カード情報が不正です」、fetch呼出は1回。不正JSONが24時間（FXでは1時間）残る。ユーザーの再確認でもネットワークへ戻らない。",
+      "expected": "schema/対象検証失敗した応答は成功キャッシュに入れず、再試行で回復する。",
+      "fix": "JsonClientへvalidatorを渡して検証成功後だけ保存、または失敗時にURLキャッシュを削除する。schema不正→正常の回復試験を追加。",
+      "evidence": "mvp-review-1-probe.mjs: calls=1, errors=[カード情報が不正です,カード情報が不正です]。"
+    },
+    {
+      "id": "R5",
+      "severity": "P2",
+      "file": "src/data/repository.ts; src/main.ts",
+      "lines": "repository.ts:34, 46-57; main.ts:187-201",
+      "title": "Repository境界が要求ID/oracle IDと応答の一致を確認しない",
+      "reproduction": "repo.card(\"REQUESTED\")へのHTTP200でid=\"OTHER\"の有効なCardを返す。またはprintings(A)にoracle_id=BのCardを混ぜる。",
+      "actual": "独立probeでrequested=REQUESTED, returned=OTHER。openIdはそのまま採用し、以後session.selectはOTHERを新しい正解対象として検証するため防げない。printingsの別Oracleカードも手動候補／日本語表示へ混入する。",
+      "expected": "カードIDと印刷版一覧のOracle対応をprovider境界で検証し、不一致をエラーにする。",
+      "fix": "cardでc.id===requestedId、printings全ページでc.oracle_id===requestedOracleIdを検証。通常検索の任意クエリは維持。異なるidentityを返すprovider回帰試験を追加。",
+      "evidence": "cardの不一致受容は独立合成実行。printings経路は静的確認。"
+    },
+    {
+      "id": "R6",
+      "severity": "P2",
+      "file": "public/recognition/lib/collectorvision-catalog-v2.mjs; public/recognition/scanner.worker.mjs",
+      "lines": "catalog:339-379; worker:754-763",
+      "title": "更新失敗時に最後の完全なモデル／辞書組へ戻す経路がない",
+      "reproduction": "有効な旧snapshot v51を残し、v52 deltaをオフライン/HTTP失敗にして初期化する。",
+      "actual": "旧snapshotを発見してもapplyUpdateの例外が外へ伝播する。workerもversion===52を必須とし、旧完全組での継続はできない。現在のv52固定は問題を先送りするだけでcontracts.md:39と開発計画:59の更新復旧要件を実装しない。",
+      "expected": "新しい組の完全検証成功まではactiveな旧組を保持し、更新失敗時は互換な旧組へ戻る。",
+      "fix": "完全組を単位とするactive/candidate管理を導入。旧モデルhashと辞書の互換性を維持してfallbackし、更新途中失敗と再開を試験。異なるモデルを無条件に旧辞書と組み合わせない。",
+      "evidence": "静的確認。IndexedDBを使う実ブラウザの中断試験は未実行。"
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "S1",
+      "severity": "P2",
+      "file": "playwright.config.ts; tests/browser/smoke.spec.ts",
+      "lines": "config:4-6; smoke:11",
+      "title": "専用port/baseURLとサーバー同一性確認",
+      "details": "5173固定かつローカルreuseExistingServer=trueで他プロジェクトを検証し得る。親による別awarsサーバ占有の報告あり。port/baseURLを環境変数化しNO_SERVER routeも同値へ揃える。専用ポート＋reuse=falseを基本にする。"
+    },
+    {
+      "id": "S2",
+      "severity": "P2",
+      "file": "public/recognition/THIRD-PARTY-NOTICES.md",
+      "lines": "8-11",
+      "title": "改変宣言の不整合",
+      "details": "catalog client is unmodifiedとの記述に反してcatalogのfetchImplをbindする変更があると提供コンテキストにある。上流固定commitとdiffを照合し、catalog改変も列挙。正しいLICENSE URL、第三者通知、対応ソース提供方針が揃うまで公開不可。"
+    },
+    {
+      "id": "S3",
+      "severity": "P2",
+      "file": "scripts/live-evidence.mjs",
+      "lines": "28-35",
+      "title": "live evidenceが認識の正解や価格成功をassertしない",
+      "details": "target出現だけで進みexpectedCardIdと実結果を比較せず、価格の「取得できません」も待機成功扱い。failureが空でも縦通し成功の根拠にならない。実際の認識ID照合とprovider-target/価格照合を機械判定し、推論の正しさと単なる実行完了を分離。"
+    },
+    {
+      "id": "S4",
+      "severity": "P3",
+      "file": "public/recognition/LICENSE-AGPL-3.0.txt; public/recognition/lib/collectorvision-catalog-v2.mjs",
+      "lines": "末尾",
+      "title": "whitespaceと残存upstreamコメント",
+      "details": "親報告のdiff --check末尾空行を整える。workerのマルチスレッド/設定UIに関する古いコメントも現実の1thread設定へ合わせる。ライセンス本文そのものの変更は最小限。"
+    }
+  ],
+  "summary": "不合格。native fetch呼出不備、Scryfall検索/429レート制御不適合、資産準備404をP1とする。検索切替時の旧認識応答復活、無効応答キャッシュ、provider identity検証不足、更新復旧欠如も修正必要。"
+}

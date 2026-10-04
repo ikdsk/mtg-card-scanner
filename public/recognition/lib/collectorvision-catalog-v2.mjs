@@ -386,8 +386,9 @@ export class CatalogV2FeedClient {
     // Only the final, fully-resolved snapshot is worth persisting: every
     // intermediate stage is superseded before the caller ever sees it.
     if (mutated) {
-      await this.#persistSnapshot(snapshot);
-      await this.#pruneCachedVersions(resolved, includeMetadata, snapshot.version, versions);
+      if (await this.#persistSnapshot(snapshot)) {
+        await this.#pruneCachedVersions(resolved, includeMetadata, snapshot.version, versions);
+      }
     }
     return snapshot;
   }
@@ -707,11 +708,13 @@ export class CatalogV2FeedClient {
   }
 
   async #persistSnapshot(catalog) {
-    if (this.cache === null) return;
+    if (this.cache === null) return false;
     try {
       await this.cache.put(catalog);
+      return true;
     } catch (error) {
       console.warn("Catalog v2 persistent cache write failed; catalog remains loaded", error);
+      return false;
     }
   }
 

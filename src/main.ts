@@ -190,11 +190,12 @@ async function openId(id: string, origin: string): Promise<void> {
   try { const c = await repo.card(id, request.signal); if (generation === detailGeneration) await openCard(c, origin); }
   catch (error) { if (generation === detailGeneration) cameraStatus.textContent = errorText(error, '候補情報を取得できません。名前検索で再試行してください。'); }
 }
-async function openCard(c: Card, origin: string): Promise<void> {
+async function openCard(c: Card, origin: string, reveal = true): Promise<void> {
   stopCamera(); detailRequest?.abort(); const request = new AbortController(); detailRequest = request; const generation = ++detailGeneration;
   printingCards = [c]; jp = c.lang === 'ja' ? c : null; printStatus = '版・言語の一覧を全ページ取得中…'; source = origin;
   void session.select(c, c.finishes.includes('nonfoil') ? 'nonfoil' : c.finishes[0] ?? 'nonfoil');
   result.hidden = false; renderResult();
+  if (reveal) result.scrollIntoView({ block: 'start', behavior: 'instant' });
   try {
     const cards = await repo.printings(c.oracle_id, request.signal);
     if (generation !== detailGeneration) return;
@@ -213,7 +214,13 @@ function choose(c: Card, finish = session.value.finish): void {
 function renderResult(): void {
   const value = session.value; const c = value.card; if (!c) { result.hidden = true; result.replaceChildren(); return; }
   result.hidden = false; const nodes: HTMLElement[] = [];
+  const focused = result.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+  const focusLabel = focused?.getAttribute('aria-label');
+  const focusText = focused?.tagName === 'BUTTON' ? focused.textContent : null;
   nodes.push(el('p', source, 'eyebrow'), el('h2', jp?.printed_name ?? c.printed_name ?? c.name), el('p', c.name, 'muted'));
+  nodes.push(button('スキャンに戻る', () => {
+    scan.scrollIntoView({ block: 'start', behavior: 'instant' }); start.focus({ preventScroll: true });
+  }));
   const controls = el('div', '', 'controls');
   const language = el('select'); language.setAttribute('aria-label', '選択版の言語');
   options(language, [...new Set(printingCards.map(x => x.lang))].map(l => [l, l === 'ja' ? '日本語 (ja)' : l === 'en' ? '英語 (en)' : l]), c.lang);
@@ -232,7 +239,7 @@ function renderResult(): void {
   options(finish, c.finishes.map(f => [f, finishNames[f] ?? f]), value.finish); finish.onchange = () => choose(c, finish.value);
   controls.append(label('実物の言語', language), label('印刷版', printing), label('実物の加工', finish));
   nodes.push(controls, el('p', printStatus, 'small muted'));
-  if (printStatus.includes('取得できません') || printStatus.includes('失敗')) nodes.push(button('版一覧を再取得', () => { void openCard(c, source); }));
+  if (printStatus.includes('取得できません') || printStatus.includes('失敗')) nodes.push(button('版一覧を再取得', () => { void openCard(c, source, false); }));
   nodes.push(el('p', `価格の参照対象：${c.set.toUpperCase()} #${c.collector_number} · ${c.lang} · ${finishNames[value.finish] ?? value.finish}`, 'target'));
   const priceBox = el('div', '', 'price-box'); const display = formatReferencePrice(value.quote, value.fx);
   priceBox.append(el('p', '海外参考価格', 'eyebrow'));
@@ -253,7 +260,13 @@ function renderResult(): void {
   const legalityNames: Record<string, string> = { legal: '使用可', not_legal: '使用不可', banned: '禁止', restricted: '制限' };
   const legalGrid = el('dl', '', 'legalities'); for (const [format, status] of Object.entries(c.legalities)) legalGrid.append(el('dt', format), el('dd', legalityNames[status] ?? status)); legalities.append(legalGrid); nodes.push(legalities);
   nodes.push(button('次のカードをスキャン', () => { void startCamera(); }, 'primary'));
-  result.replaceChildren(...nodes); mark('result-render');
+  result.replaceChildren(...nodes);
+  if (focused) {
+    const replacement = [...result.querySelectorAll<HTMLElement>('select, button')].find(node =>
+      focusLabel ? node.getAttribute('aria-label') === focusLabel : focusText !== null && node.tagName === 'BUTTON' && node.textContent === focusText);
+    replacement?.focus({ preventScroll: true });
+  }
+  mark('result-render');
 }
 function facePanel(face: Face, japanese: boolean): HTMLElement {
   const box = el('article', '', 'face'); box.append(el('h4', japanese ? face.printed_name ?? face.name : face.name), el('p', `${face.mana_cost ?? ''}　${japanese ? face.printed_type_line ?? face.type_line ?? '' : face.type_line ?? ''}`, 'muted'), el('p', japanese ? face.printed_text ?? '日本語印刷本文なし' : face.oracle_text ?? 'Oracle本文なし', 'rules'));

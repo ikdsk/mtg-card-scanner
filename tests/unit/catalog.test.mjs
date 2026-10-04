@@ -60,3 +60,30 @@ it('resumes a failed update, validates complete candidate and persists it atomic
   expect(cache.put).toHaveBeenCalledExactlyOnceWith(updated);
   expect(cache.delete).toHaveBeenCalledWith(51, 'milo1/scryfall/mtg', false);
 });
+
+it('retains v51 after quota failure and a fresh client can use it offline (SYNTHETIC)', async () => {
+  const { feed, previous } = await fixture();
+  const { gzipSync } = await import('node:zlib');
+  const { createHash } = await import('node:crypto');
+  const records = gzipSync(JSON.stringify({ op: 'upsert', record: { id: 'SYNTHETIC', name: 'Updated fixture', identifiers: {} }, embedding_index: 0 }) + '\n');
+  const embeddings = gzipSync(Buffer.alloc(256));
+  const assets = feed.families.milo1.catalogs['scryfall/mtg'].updates['52'].assets;
+  for (const [key, bytes] of Object.entries({ records, embeddings })) {
+    assets[key].size = bytes.length; assets[key].sha256 = createHash('sha256').update(bytes).digest('hex');
+  }
+  const stored = new Map([[51, previous]]);
+  const cache = { get: async v => stored.get(v) ?? null, put: vi.fn(async () => { throw new DOMException('controlled quota failure', 'QuotaExceededError'); }), delete: vi.fn(async v => { stored.delete(v); }) };
+  let offline = false;
+  const fetchImpl = async url => String(url).endsWith('feed.json') ? new Response(JSON.stringify(feed)) : offline ? new Response('', { status: 503 }) : new Response(String(url).includes('records') ? records : embeddings);
+  const options = { fetchImpl, feedUrl: 'https://fixture.example/feed.json', cache };
+  expect((await new CatalogV2FeedClient(options).loadGame('mtg', { includeMetadata: false })).version).toBe(52);
+  expect(cache.put).toHaveBeenCalledOnce();
+  offline = true;
+  const reloaded = await new CatalogV2FeedClient(options).loadGame('mtg', { includeMetadata: false });
+  expect(reloaded.version).toBe(51);
+  expect(reloaded.records).toEqual(previous.records);
+  expect(reloaded.embeddings).toEqual(previous.embeddings);
+  expect(reloaded.updateError).toContain('503');
+  expect(cache.delete).not.toHaveBeenCalled();
+  expect(stored.get(51)).toBe(previous);
+});
