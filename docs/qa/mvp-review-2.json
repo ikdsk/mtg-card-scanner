@@ -1,0 +1,26 @@
+{
+  "passed": false,
+  "security_concerns": [],
+  "logic_errors": [
+    {
+      "id": "R6-persist",
+      "severity": "P2",
+      "file": "public/recognition/lib/collectorvision-catalog-v2.mjs",
+      "lines": "388-390, 395-400, 709-715",
+      "title": "新catalog保存失敗でも旧完全snapshotを削除し、次回のfallbackを失う",
+      "reproduction": "mvp-review-2-probe.mjs: 互換v51をcacheへ保持し、有効な合成v52 deltaを取得。cache.putでQuotaExceededErrorを投げ、続く再初期化で資産HTTP503を返す。",
+      "actual": "v52はメモリ上で有効になるが、put失敗を#persistSnapshotが握りつぶし、直後に#pruneCachedVersionsがv50/v51を削除。persistedAfter=[]。次回はv51 fallbackではなくbase v50の再取得でHTTP503になり起動できない。",
+      "expected": "新snapshot永続化に失敗した場合は最後の完全な旧snapshotを削除せず、次回の互換fallbackを維持する。",
+      "fix": "永続化成功を返して成功時だけpruneするか、保存と旧版削除を単一成功transactionへ限定する。保存失敗→再初期化→更新失敗でも旧版利用できる回帰試験を追加。",
+      "evidence": "独立合成probe実行exit0（欠陥再現assert成立）、mvp-review-2-probe-results.json。実端末quota発生率は未測定。"
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "release-scope",
+      "title": "コード判定と公開承認は別",
+      "details": "npm ci/check/build成功、129 unit/regression・12 Chromium E2E成功。E2Eは合成provider/runtimeとdesktop/mobile viewportであり、実カード認識精度・iPhone/Android実機・公開許諾を証明しない。大容量assets:prepare/実モデル実験は親担当と重複させず未実行。"
+    }
+  ],
+  "summary": "固定SHA227e745bab3ef449f8d5e10d4f3dd3c1b36b6878は不合格。旧R1/R2/R3/R4/R5/R7とworker初回init/gzipの修正を確認したが、R6の更新復旧は保存失敗時に旧snapshotを消すP2が残る。製品変更・commit・pushは行っていない。"
+}

@@ -7,14 +7,22 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "test": "vitest run",
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run tests/unit tests/regression",
+    "test:e2e": "playwright test",
+    "assets:prepare": "node scripts/prepare-assets.mjs",
+    "evidence:live": "node scripts/live-evidence.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
+    "@playwright/test": "1.59.1",
     "@types/node": "26.6.4",
     "typescript": "7.0.2",
+    "vite": "8.3.2",
     "vitest": "5.0.3"
   }
 }

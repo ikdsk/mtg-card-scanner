@@ -1,0 +1,97 @@
+{
+  "checked_at": "2026-10-03T12:37:28Z",
+  "families": {
+    "milo1": {
+      "embedding": {
+        "model": "collectorvision@9d45a37ebfe40f22ece70507015645de134dc3ec:milo-1.0.0@sha256:bd13d8d60383c69da04dce261f32e93fdaeaa8fd618fbc991e7385f71b3d45df",
+        "dimensions": 128,
+        "dtype": "float16",
+        "byte_order": "little",
+        "layout": "row-major"
+      },
+      "catalogs": {
+        "scryfall/mtg": {
+          "public_name": "scryfall-mtg",
+          "descriptor": {
+            "game": "magic-the-gathering",
+            "source": "scryfall",
+            "profile": "default",
+            "description": "English-first paper printings from Scryfall default cards.",
+            "result_identifier": "scryfall_card",
+            "recommended": true
+          },
+          "current_version": 52,
+          "rows": 113113,
+          "source_updated_at": "2026-10-03T09:05:39.295Z",
+          "base": {
+            "version": 50,
+            "rows": 113111,
+            "source_updated_at": "2026-10-01T09:05:35.752Z",
+            "assets": {
+              "embeddings": {
+                "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/50/base/embeddings.f16.gz",
+                "size": 26470640,
+                "sha256": "d27cdf0317aea27d53cba81a97929584b4c7dc0fb168abf9e37d5ef971167cab"
+              },
+              "records": {
+                "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/50/base/records.jsonl.gz",
+                "size": 9055736,
+                "sha256": "ac911eccb86334015ad9e01b569728ef590df8a1fccf8bad04f03ab419493ad6"
+              }
+            }
+          },
+          "updates": {
+            "51": {
+              "from_version": 50,
+              "to_version": 51,
+              "rows": {
+                "added": 0,
+                "updated": 11,
+                "deleted": 0
+              },
+              "recognition_rows": 11,
+              "metadata_rows": 0,
+              "source_updated_at": "2026-10-02T09:05:46.742Z",
+              "assets": {
+                "embeddings": {
+                  "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/51/delta-from-50/embeddings.f16.gz",
+                  "size": 2675,
+                  "sha256": "f9ce2d14b5c4aef8de072c76dd862d5a92fb99d93186f0d9acff81337e9deccd"
+                },
+                "records": {
+                  "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/51/delta-from-50/records.jsonl.gz",
+                  "size": 891,
+                  "sha256": "58776d8afaee2c579f0e6e60cf25afcb0191d0fc3958245df0228b7b740d347f"
+                }
+              }
+            },
+            "52": {
+              "from_version": 51,
+              "to_version": 52,
+              "rows": {
+                "added": 2,
+                "updated": 315,
+                "deleted": 0
+              },
+              "recognition_rows": 317,
+              "metadata_rows": 2,
+              "source_updated_at": "2026-10-03T09:05:39.295Z",
+              "assets": {
+                "embeddings": {
+                  "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/52/delta-from-51/embeddings.f16.gz",
+                  "size": 74822,
+                  "sha256": "992d102a5f01c4dc1a01db8debe7bf853ab2d4fec4bdc26b58e628a788c492a9"
+                },
+                "records": {
+                  "url": "https://hanclinto.github.io/CollectorVisionCatalog/catalog-v2/scryfall-mtg/version/52/delta-from-51/records.jsonl.gz",
+                  "size": 21524,
+                  "sha256": "cf355bfe2d2a749b085853d6c29ebc225f7a4b3f1fd3bd0d850edc1b17e72e0a"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

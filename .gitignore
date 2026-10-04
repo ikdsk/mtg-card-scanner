@@ -9,3 +9,7 @@ artifacts/
 models/
 card-images/
 .worktrees/
+public/recognition/assets/
+public/recognition/vendor/
+test-results/
+playwright-report/
