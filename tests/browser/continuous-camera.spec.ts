@@ -52,7 +52,7 @@ test('new tentative candidate rejects delayed old metadata; only confirmation re
  let release!:()=>void;const pending=new Promise<void>(resolve=>{release=resolve;});
  await page.route('https://api.scryfall.com/cards/continuous-a',async route=>{await pending;await route.fulfill({json:a}).catch(()=>{});});
  await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
- await expect(page.locator('.tentative')).toContainText('continuous-a');await expect(page.locator('.scan-history-row')).toHaveCount(0);
+ await expect(page.locator('.empty-candidate')).toContainText('カード情報を確認中');await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('body')).not.toContainText('continuous-a');await expect(page.locator('.scan-history-row')).toHaveCount(0);
  await page.evaluate(()=>{const s=(window as any).continuousProbe;s.id='continuous-b';s.oracle='oracle-b';});
  await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);
  release();await expect(page.locator('.scan-history-row')).toHaveCount(1);

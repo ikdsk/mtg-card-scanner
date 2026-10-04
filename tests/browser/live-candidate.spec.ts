@@ -5,12 +5,20 @@ const a={id:'continuous-a',oracle_id:'oracle-a',name:'Synthetic Alpha',lang:'en'
 const b={...a,id:'continuous-b',oracle_id:'oracle-b',name:'Synthetic Beta'};
 async function installSyntheticFlow(page: Page) {
  await page.addInitScript(()=>{
-  const state={id:'continuous-a',oracle:'oracle-a',present:true,hold:false,frames:0,score:.623,margin:.01,latency:10};Object.assign(window,{continuousProbe:state});
+  const state={id:'continuous-a',oracle:'oracle-a',present:true,hold:false,frames:0,score:.623,margin:.01,latency:10,timings:[] as {frame:number;dispatchedAt:number;completedAt:number|undefined;present:boolean}[],completionWaiters:[] as (()=>void)[]};Object.assign(window,{continuousProbe:state});
   navigator.mediaDevices.getUserMedia=async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;c.getContext('2d')!.fillRect(0,0,1280,720);return c.captureStream(5);};
   class SyntheticWorker {
    onmessage:((e:{data:unknown})=>void)|null=null;
    postMessage(data:{type:string;bitmap?:ImageBitmap}){data.bitmap?.close();if(data.type==='frame')state.frames++;if(state.hold&&data.type==='frame')return;
-    const snapshot={...state};setTimeout(()=>this.onmessage?.({data:data.type==='init'?{type:'ready',catalogVersion:52}:{type:'result',cardId:snapshot.id,scryfallOracleId:snapshot.oracle,cardPresent:snapshot.present,cornersValid:snapshot.present,corners:[[.1,.1],[.9,.1],[.9,.9],[.1,.9]],score:snapshot.score,margin:snapshot.margin}}),data.type==='init'?10:snapshot.latency);}
+    const snapshot={...state};
+    const timing=data.type==='frame'?{frame:state.frames,dispatchedAt:performance.now(),completedAt:undefined as number|undefined,present:snapshot.present}:null;
+    if(timing)state.timings.push(timing);
+    setTimeout(()=>{
+     if(timing)timing.completedAt=performance.now();
+     this.onmessage?.({data:data.type==='init'?{type:'ready',catalogVersion:52}:{type:'result',cardId:snapshot.id,scryfallOracleId:snapshot.oracle,cardPresent:snapshot.present,cornersValid:snapshot.present,corners:[[.1,.1],[.9,.1],[.9,.9],[.1,.9]],score:snapshot.score,margin:snapshot.margin}});
+     // Resolve after the real loop's result continuation updates state and schedules its delay.
+     if(timing)queueMicrotask(()=>state.completionWaiters.splice(0).forEach(resolve=>resolve()));
+    },data.type==='init'?10:snapshot.latency);}
    terminate(){}
   }Object.defineProperty(window,'Worker',{value:SyntheticWorker});
  });
@@ -39,13 +47,15 @@ test('pointer identity and dismissed delayed metadata cannot select another card
  await page.getByRole('button',{name:'違う',exact:true}).click();await page.waitForTimeout(600);await expect(page.locator('.tentative')).toBeHidden();
  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
-test('dismiss while metadata pending never resurrects or fabricates result (SYNTHETIC)',async({page})=>{
+test('pending metadata is no result and stopped late metadata cannot resurrect (SYNTHETIC)',async({page})=>{
  await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);
- await page.route('https://api.scryfall.com/cards/continuous-a',async route=>{await pending;await route.fulfill({json:a});});
- await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('continuous-a');
- await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.tentative')).toContainText('取得完了後');
- await page.getByRole('button',{name:'違う',exact:true}).click();release();await page.waitForTimeout(600);await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);
- await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+ await page.route('https://api.scryfall.com/cards/continuous-a',async route=>{await pending;await route.fulfill({json:a}).catch(()=>{});});
+ await page.goto('/');await closeRoute(page);await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await expect(page.locator('.empty-candidate')).toContainText('カード情報を確認中');
+ await expect(page.locator('.tentative')).toBeHidden();await expect(page.getByRole('button',{name:'これです',exact:true})).toBeHidden();
+ await expect(page.locator('body')).not.toContainText('continuous-a');await expect(page.locator('.scan-history-row')).toHaveCount(0);
+ await page.getByRole('button',{name:'停止',exact:true}).click();release();await page.waitForTimeout(600);
+ await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);
 });
 test('settings invalid/reset and tentative threshold apply with preserved history/manual selection (SYNTHETIC)',async({page})=>{
  await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
@@ -63,13 +73,40 @@ test('all obsolete automatic controls are removed (SYNTHETIC)',async({page})=>{
  for(const name of ['自動受付の類似度','異なるOracleとの最小 margin','自動受付の同じ印刷版の連続観測数'])await expect(page.getByLabel(name,{exact:true})).toHaveCount(0);
  await expect(page.locator('.recognition-settings input')).toHaveCount(5);
 });
-test('delay and both absence controls change capture/rearm; overlay expiry changes painting (SYNTHETIC)',async({page})=>{
+test('delay and both absence controls change capture/rearm; overlay expiry changes painting (SYNTHETIC)',async({page},info)=>{
  await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
  const set=async(name:string,value:string)=>{await openRoute(page,'設定');const input=page.getByLabel(name,{exact:true});await input.fill(value);await input.dispatchEvent('change');};
  await set('推論完了後の待ち時間 (ms)','700');await set('同じカードの再受付に必要な不在観測数','2');await set('不在の最小継続時間 (ms)','0');await set('四隅の表示期限 (ms)','100');
  await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'違う',exact:true}).click();
- const before=await page.evaluate(()=>(window as any).continuousProbe.frames);await page.waitForTimeout(400);expect(await page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(before);await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','false');
- await page.evaluate(()=>{(window as any).continuousProbe.present=false;});await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(before+2);await page.evaluate(()=>{(window as any).continuousProbe.present=true;});await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
+ // All transitions run inside the page from actual completion events; runner polling
+ // cannot shift the 400ms checkpoint across a frame boundary.
+ const evidence=await page.evaluate(async()=>{
+  const state=(window as any).continuousProbe;
+  const completed=()=>new Promise<void>(resolve=>state.completionWaiters.push(resolve));
+  await completed();
+  const baseline=state.frames;
+  const completion=state.timings.at(-1).completedAt;
+  await new Promise(resolve=>setTimeout(resolve,400));
+  const checkpoint={elapsed:performance.now()-completion,frames:state.frames,detected:document.querySelector('.detection-overlay')!.getAttribute('data-detected')};
+  state.present=false;await completed();
+  state.present=true;await completed();
+  const afterOneAbsence=document.querySelector<HTMLElement>('.tentative')!.hidden;
+  state.present=false;await completed();await completed();
+  state.present=true;await completed();
+  return {baseline,checkpoint,afterOneAbsence,timings:state.timings};
+ });
+ await info.attach('frame-timings',{body:JSON.stringify(evidence,null,2),contentType:'application/json'});
+ console.log(`${info.project.name} frame-timings ${JSON.stringify(evidence)}`);
+ expect(evidence.checkpoint.elapsed).toBeGreaterThanOrEqual(400);
+ expect(evidence.checkpoint.frames).toBe(evidence.baseline);
+ expect(evidence.checkpoint.detected).toBe('false');
+ expect(evidence.afterOneAbsence).toBe(true);
+ for(let i=1;i<evidence.timings.length;i++){
+  // The configured delay starts after inference, not after dispatch or metadata.
+  expect(evidence.timings[i].dispatchedAt-evidence.timings[i-1].completedAt).toBeGreaterThanOrEqual(700);
+ }
+ expect(evidence.timings.slice(-5).map((frame:any)=>frame.present)).toEqual([false,true,false,false,true]);
+ await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('320px proposal stays in immersive viewport and network is coalesced (SYNTHETIC)',async({page},info)=>{
@@ -115,22 +152,17 @@ test('mobile proposal confirmation is visible without scrolling and panel text h
 for (const key of ['Space', 'Enter'] as const) test(`held ${key} autorepeat cannot confirm replacement B (SYNTHETIC native keyboard)`, async ({page}, info) => {
  await installSyntheticFlow(page);await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
  await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
- // Enter clicks on keydown. Make A metadata unavailable so that its first activation
- // cannot accept A; replacement must still not let the held gesture accept B.
- if(key==='Enter') {
-  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();await page.reload();
-  await page.route('https://api.scryfall.com/cards/continuous-a',route=>route.abort());
-  await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('取得できません');
- }
+ // Enter confirms verified A on keydown; a held gesture must never confirm B.
  await page.evaluate(()=>{Object.assign(window,{activationEvents:[]});document.addEventListener('keydown',event=>{(window as any).activationEvents.push({key:event.key,repeat:event.repeat});});});
  const confirm=page.getByRole('button',{name:'これです',exact:true});await confirm.focus();await page.keyboard.down(key);
  await page.evaluate(()=>{Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b'});});await expect(page.locator('.tentative')).toContainText('Synthetic Beta');
  await page.keyboard.down(key);await page.keyboard.up(key);
  await info.attach('native-key-events',{body:JSON.stringify(await page.evaluate(()=>(window as any).activationEvents)),contentType:'application/json'});
  expect(await page.evaluate(()=>(window as any).activationEvents.map((event:any)=>event.repeat))).toEqual([false,true]);
- await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
+ await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(key==='Enter'?1:0);
+ if(key==='Enter')await expect(page.locator('.result h2')).toHaveText('Synthetic Alpha');else await expect(page.locator('.result')).toBeHidden();
  // A new gesture after release can confirm the current verified candidate.
- await page.keyboard.press(key);await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await confirm.focus();await page.keyboard.press(key);await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(key==='Enter'?2:1);
  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 
@@ -142,7 +174,7 @@ for(const cancel of ['blur','window blur','pointercancel'] as const) test(`cance
  else await confirm.dispatchEvent('pointercancel');
  await page.evaluate(()=>Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b'}));await expect(page.locator('.tentative')).toContainText('Synthetic Beta');
  await page.keyboard.down('Space');await page.keyboard.up('Space');await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
- await page.keyboard.press('Space');await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+ await confirm.focus();await page.keyboard.press('Space');await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 
 test('high score repeated observations never confirm; obsolete auto controls absent (SYNTHETIC)',async({page})=>{

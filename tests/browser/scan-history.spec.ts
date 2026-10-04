@@ -137,5 +137,7 @@ test('101 deliberate scans retain only the newest 100 rows', async ({ page }) =>
     await openRoute(page,'確定カード'); await expect(page.locator('.result')).toBeVisible();
   }
   await expect(page.locator('.scan-history-row')).toHaveCount(100);
-  await expect(page.locator('.scan-history-row').filter({ hasText: '合成アルファ' })).toHaveCount(0);
+  // Japanese display names can be shared by all printings; assert evicted physical edition.
+  await expect(page.locator('.scan-history-row').filter({ hasText: '(ALT) #2 · ja' })).toHaveCount(0);
+  await expect(page.locator('.scan-history-row').filter({ hasText: '(TST) #1 · en' })).toHaveCount(100);
 });

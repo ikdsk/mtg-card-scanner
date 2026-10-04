@@ -18,7 +18,8 @@
 //   { type: 'error',    message }
 
 // Modified for MTG Card Scanner (2026-10-04): pinned WASM runtime, verified
-// model downloads, optional local assets, bounded requests, identity margin.
+// model downloads, optional local assets, bounded requests, identity margin,
+// and validated physical catalog face propagation (legacy/invalid defaults front).
 // Original: HanClinto/CollectorVision @ 2a122d00d25c8d112a90e47bf235a021e0c53b0c
 // License: AGPL-3.0; see LICENSE-AGPL-3.0.txt and THIRD-PARTY-NOTICES.md.
 const localAssets = new URL(self.location.href).searchParams.has('local');
@@ -591,6 +592,7 @@ class WorkerRuntime {
     this.inputNames = {};
     this.embeddings = null;
     this.cardIds = null;
+    this.faceIndices = null;
     this.cardNames = null;
     this.secondaryIds = null;
     this.secondaryIdField = null;
@@ -773,6 +775,7 @@ class WorkerRuntime {
       ? catalog.embeddings.slice(0, requestedRows * catalog.dimension)
       : catalog.embeddings;
     this.cardIds = records.map((record) => record.id);
+    this.faceIndices = records.map((record) => record.faceIndex === 1 ? 1 : 0);
     this.cardNames = records.map((record) => record.name);
     this.secondaryIdField = "scryfallOracleId";
     this.secondaryIds = records.map((record) => record.identifiers.scryfall_oracle ?? null);
@@ -982,6 +985,7 @@ class WorkerRuntime {
       margin: ranked.length > 1 ? ranked[0] - ranked[1] : 1,
       score: bestScore,
       cardId: this.cardIds[bestIndex],
+      faceIndex: this.faceIndices?.[bestIndex] ?? 0,
       cardName: this.cardNames?.[bestIndex] ?? null,
       secondaryId,
       secondaryIdField: this.secondaryIdField,
@@ -1106,6 +1110,7 @@ async function processFrame(bitmap, captureRequested = false, includeDebugBitmap
     sharpness: detection.sharpness,
     confidence: detection.confidence,
     cardId: best.cardId,
+    faceIndex: best.faceIndex,
     cardName: best.cardName,
     secondaryId: best.secondaryId,
     secondaryIdField: best.secondaryIdField,

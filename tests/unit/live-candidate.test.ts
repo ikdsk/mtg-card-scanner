@@ -25,3 +25,11 @@ it('explicit new scan context clears suppression and invalidates immutable inter
  const live=new LiveCandidate();const first=live.observe(c,0)!;live.accepted(first.identity);live.newContext();
  expect(live.current(first)).toBe(false);expect(live.observe(c,100)).not.toBeNull();
 });
+it('versions recognized faces immutably; absent/invalid faces default to front',()=>{
+ const live=new LiveCandidate();const front=live.observe({...c,faceIndex:0},0)!;
+ const repeated=live.observe({...c,faceIndex:0},1)!;expect(repeated.version).toBe(front.version);
+ const back=live.observe({...c,faceIndex:1},2)!;expect(back.faceIndex).toBe(1);expect(back.version).not.toBe(front.version);expect(front.faceIndex).toBe(0);expect(live.current(front)).toBe(false);
+ for(const faceIndex of [undefined,-1,2,NaN,Infinity,1.5,'1']){
+  const observed=live.observe({...c,faceIndex} as typeof c,3)!;expect(observed.faceIndex).toBe(0);
+ }
+});

@@ -2,6 +2,7 @@ import './ui/style.css';
 import { el, button, label } from './ui/dom.js';
 import { Repository, FxProvider } from './data/repository.js';
 import type { Card, Face } from './data/cards.js';
+import { japaneseName, japaneseDisplay, japaneseFaceName } from './data/japanese-name.js';
 import { ScanHistory } from './ui/scan-history-model.js';
 import { ScanHistoryView } from './ui/scan-history.js';
 import { FormatLegality } from './ui/format-legality.js';
@@ -30,11 +31,11 @@ const detectionStatus = el('p', 'カード検出なし', 'small'); detectionStat
 const overlay = new DetectionOverlay(overlayCanvas, video, visible => { detectionStatus.textContent = visible ? 'カードの四隅を検出 · カード名の確定とは別です' : 'カード検出なし'; });
 guide.hidden = true; viewport.append(video, overlayCanvas, guide);
 const cameraStatus = el('p', 'カメラは停止中', 'status camera-status'); cameraStatus.setAttribute('role', 'status');
-const modelStatus = el('p', '認識データはスキャン開始時に準備します', 'muted small'); modelStatus.setAttribute('role', 'status');
+const modelStatus = el('p', '認識データを準備中', 'muted small'); modelStatus.setAttribute('role', 'status');
 const scanActions = el('div', '', 'actions');
 const start = button('カメラでスキャン', () => { void startCamera(); }, 'primary');
 const stop = button('停止', () => stopCamera('カメラを停止しました'));
-const modelRetry = button('認識の準備を再試行', () => { recognizer.dispose(); const generation = scanGeneration; void prepare().then(ok => { if (ok && active && generation === scanGeneration) void loop(generation); }); }); modelRetry.hidden = true;
+const modelRetry = button('認識の準備を再試行', () => { invalidatePreparation(); const generation = scanGeneration; void prepare().then(ok => { if (ok && active && generation === scanGeneration) void loop(generation); }); }); modelRetry.hidden = true;
 const file = el('input'); file.type = 'file'; file.accept = 'image/*'; file.id = 'local-image';
 const fileLabel = label('端末の画像でスキャン', file); fileLabel.className = 'file-button';
 scanActions.append(start, stop, fileLabel, modelRetry);
@@ -86,6 +87,7 @@ for(const key of Object.keys(defaults) as (keyof RecognitionSettings)[]) {
 }
 settingsPanel.append(button('認識設定を初期値に戻す',()=>applySettings({...defaults})),settingsError);
 const history = new ScanHistory();
+const historyDisplayNames=new Map<string,string>();
 let currentHistoryGeneration: number | null = null;
 const historyView = new ScanHistoryView(entry => {
   stopCamera('履歴を表示中 · カメラは停止しています');
@@ -106,7 +108,7 @@ const drawerHeading=el('h2'); drawerHeading.id='drawer-heading';drawer.setAttrib
 const drawerBar=el('div','','drawer-bar');const drawerClose=button('補助画面を閉じる',()=>closeDrawer());drawerBar.append(drawerHeading,drawerClose);
 const drawerBody=el('div','','drawer-body');const historyRoute=el('div');historyRoute.append(el('p','確定したスキャンはまだありません。','empty-history'),historyView.node);
 const settingsRoute=el('div');settingsRoute.append(settingsPanel,information);
-searchPanel.append(fileLabel,modelRetry);
+searchPanel.append(fileLabel);
 const routes={search:searchPanel,history:historyRoute,settings:settingsRoute,result};
 const routeNames={search:'名前検索',history:'履歴',settings:'設定',result:'確定カード'};
 let drawerTrigger:HTMLElement|null=null;
@@ -160,9 +162,10 @@ fitViewport();window.addEventListener('resize',fitViewport);window.visualViewpor
 
 let stream: MediaStream | null = null; let scanGeneration = 0; let active = false; let modelReady = false;
 let preparationGeneration = 0;
+let preparation: Promise<boolean> | null = null;
 let frameBusy = false; let loopTimer: ReturnType<typeof setTimeout> | null = null;
 let detailGeneration = 0; let detailRequest: AbortController | null = null;
-let printingCards: Card[] = []; let jp: Card | null = null; let printStatus = ''; let source = '';
+let printingCards: Card[] = []; let printStatus = ''; let source = '';
 let searchGeneration = 0; let searchRequest: AbortController | null = null; let nextPage: string | null = null;
 const tentative = new LiveCandidate();
 // Separate request queues keep a slow confirmed printing list from blocking the
@@ -172,7 +175,7 @@ const snapshots = new CandidateMetadata((id:string,signal:AbortSignal)=>candidat
 const japaneseSnapshots=new CandidateMetadata((oracle:string,signal:AbortSignal)=>candidateRepo.printings(oracle,signal));
 const candidateFx=new CandidateMetadata((_key:string,signal:AbortSignal)=>fx.latest(signal));
 const candidateSession=new ResultSession((id)=>snapshots.get(id),()=>candidateFx.get('USDJPY'),renderCandidatePrice);
-let suggestion: Suggestion | null=null; let suggestionCard: Card | null=null;
+let suggestion: Suggestion | null=null; let suggestionCard: Card | null=null; let suggestionJapanese: Card | null=null;
 let lastAnnouncement=-Infinity;
 type ActivationGesture = { snapshot: Suggestion | null; key: string | null };
 const gestures = new Map<HTMLButtonElement, ActivationGesture>();
@@ -209,7 +212,7 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;}
+function hideSuggestion():void {snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
@@ -219,22 +222,22 @@ function presentSuggestion(next: Suggestion | null):void {
  if(!next){hideSuggestion();return;}
  const changed=suggestion?.version!==next.version;suggestion=next;tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
  if(!changed)return;
- snapshots.cancelExcept(next.cardId);japaneseSnapshots.cancelExcept(null);candidateSession.reset();tentativeReference.clear();tentativeFormats.clear();tentativeEnglish.textContent='';tentativeExpansion.textContent='';tentativeName.textContent='';suggestionCard=null;tentativeSummary.prepend(tentativeReference.node);tentativeDetails.insertBefore(tentativeFormats.node,tentativeSources);tentativeRules.replaceChildren();tentativePrice.classList.add("price-box");tentativePanel.hidden=false;emptyCandidate.hidden=true;tentativeName.textContent=next.cardId;tentativeMessage.textContent='カード情報を確認中…';if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}
+ snapshots.cancelExcept(next.cardId);japaneseSnapshots.cancelExcept(null);candidateSession.reset();tentativeReference.clear();tentativeFormats.clear();tentativeEnglish.textContent='';tentativeExpansion.textContent='';tentativeName.textContent='';suggestionCard=null;suggestionJapanese=null;tentativeSummary.prepend(tentativeReference.node);tentativeDetails.insertBefore(tentativeFormats.node,tentativeSources);tentativeRules.replaceChildren();tentativePrice.classList.add("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カード情報を確認中…';tentativeMessage.textContent='カード情報を確認中…';
  void snapshots.get(next.cardId).then(card=>{
   if(!suggestion || !tentative.current(next))return;
-  suggestionCard=card;tentativeName.textContent=card.lang==='ja'&&card.printed_name ? `日本語：${card.printed_name}` : '日本語：確認中…';
+  if(card.id!==next.cardId || !card.name.trim() || card.name.trim()===card.id || card.name.trim()===card.oracle_id){emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
+  tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
   tentativeEnglish.textContent=`英語：${card.name}`;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
   tentativeExpansion.textContent=`${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
-  tentativeMessage.textContent='実物の版・言語・加工は未確認';tentativeReference.update(card);tentativeFormats.update(card.id,card.legalities);renderCandidateRules(card,card.lang==='ja'?card:null);
+  tentativeMessage.textContent='実物の版・言語・加工は未確認';tentativeReference.update(card,next.faceIndex);tentativeFormats.update(card.id,card.legalities);renderCandidateRules(card,card.lang==='ja'?card:null);
   void candidateSession.select(card,finish);
-  if(card.lang==='ja') {if(!card.printed_name)tentativeName.textContent='日本語名は利用できません';return;}
+  if(japaneseName(card))return;
   void japaneseSnapshots.get(card.oracle_id).then(cards=>{
    if(!suggestion||!tentative.current(next))return;
-   const verified=cards.filter(c=>c.oracle_id===card.oracle_id&&c.lang==='ja'&&c.printed_name);
-   const japanese=verified.find(c=>c.set===card.set&&c.collector_number===card.collector_number)??verified[0];
-   tentativeName.textContent=japanese ? `日本語：${japanese.printed_name}` : '日本語名は利用できません';renderCandidateRules(card,japanese??null);
+   const japanese=japaneseDisplay(card,cards);suggestionJapanese=japanese;
+   tentativeName.textContent=japanese ? `日本語：${japaneseName(japanese)}` : '日本語名は利用できません';renderCandidateRules(card,japanese??null);
   }).catch(()=>{if(suggestion&&tentative.current(next))tentativeName.textContent='日本語名は利用できません';});
- }).catch(()=>{if(suggestion&&tentative.current(next)){tentativeMessage.textContent='カード情報を取得できません。確認できないため確定できません。名前検索を利用してください。';}});
+ }).catch(()=>{if(suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
 }
 function renderCandidateRules(card:Card,japanese:Card|null):void {
  const nodes:HTMLElement[]=[el('h3','日本語の印刷情報')];
@@ -258,10 +261,12 @@ function confirmSuggestion():void {
  const captured=activationSnapshot(confirm);
  if(!captured || !tentative.current(captured) || suggestion?.version!==captured.version)return;
  const card=suggestionCard;if(!card || card.id!==captured.cardId){tentativeMessage.textContent='カード情報を確認できません。取得完了後に再確認してください。';return;}
+ const displayName=suggestionJapanese ? japaneseName(suggestionJapanese) : japaneseName(card);
+ if(displayName){historyDisplayNames.delete(card.id);historyDisplayNames.set(card.id,displayName);if(historyDisplayNames.size>100)historyDisplayNames.delete(historyDisplayNames.keys().next().value!);}
  evidenceRevision++;tentative.accepted(captured.identity);hideSuggestion();
  const event=++acceptedEvent;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
- history.accept(event,card,finish);currentHistoryGeneration=event;historyView.update(history.allEntries);
- void openCard(card,'「これです」で確認 · 実物の版・言語・加工は未確認',false,finish,active);
+ history.accept(event,card,finish);currentHistoryGeneration=event;historyView.update(history.allEntries,historyDisplayNames);
+ void openCard(card,'「これです」で確認 · 実物の版・言語・加工は未確認',false,finish,active,captured.faceIndex);
 }
 let acceptedEvent = 0;
 const recognizer = new Recognizer(message => { modelStatus.textContent = message; });
@@ -269,11 +274,23 @@ const referenceImage = new ReferenceImage();
 const formatLegality = new FormatLegality();
 const session = new ResultSession((id, signal) => repo.card(id, signal), signal => fx.latest(signal), renderResult);
 
-async function prepare(): Promise<boolean> {
+function invalidatePreparation(): void {
+  preparationGeneration++;
+  preparation = null;
+  modelReady = false;
+  recognizer.dispose();
+}
+function prepare(): Promise<boolean> {
+  if (modelReady) return Promise.resolve(true);
+  if (preparation) return preparation;
   const attempt = ++preparationGeneration;
   modelRetry.hidden = true; mark('model-start');
-  try { await recognizer.init(); if (attempt !== preparationGeneration) return false; modelReady = true; mark('model-ready'); return true; }
-  catch (error) { if (attempt !== preparationGeneration) return false; modelReady = false; modelStatus.textContent = errorText(error, '認識データを準備できません。名前検索は利用できます。'); modelRetry.hidden = false; mark('model-error'); return false; }
+  preparation = (async () => {
+    try { await recognizer.init(); if (attempt !== preparationGeneration) return false; modelReady = true; mark('model-ready'); return true; }
+    catch (error) { if (attempt !== preparationGeneration) return false; modelReady = false; modelStatus.textContent = errorText(error, '認識データを準備できません。名前検索は利用できます。'); modelRetry.hidden = false; mark('model-error'); return false; }
+    finally { if (attempt === preparationGeneration) preparation = null; }
+  })();
+  return preparation;
 }
 function errorText(error: unknown, fallback: string): string {
   if (!navigator.onLine) return 'オフラインです。接続後に再試行してください。';
@@ -347,7 +364,7 @@ async function scanFile(image: File): Promise<void> {
   detailGeneration++; detailRequest?.abort(); session.reset();
   // A local image starts a new recognition session; never compete with a
   // transferred camera frame that cannot be recalled from the old worker.
-  recognizer.dispose(); modelReady = false;
+  invalidatePreparation();
   stopCamera(); const generation = scanGeneration;
   cameraStatus.textContent = '端末の画像を認識中（外部送信なし）';
   try {
@@ -365,9 +382,10 @@ async function scanFile(image: File): Promise<void> {
   } catch (error) { if (generation === scanGeneration) cameraStatus.textContent = errorText(error, '画像を認識できません。'); }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera('背景に移動したため停止しました。カメラでスキャンから再開できます。'); });
-window.addEventListener('pagehide', () => { stopCamera(); recognizer.dispose(); modelReady = false; });
+window.addEventListener('pagehide', () => { stopCamera(); invalidatePreparation(); });
 window.addEventListener('offline', () => { searchStatus.textContent = 'オフラインです。接続後に検索を再試行してください。'; });
 stop.disabled = true;
+void prepare();
 
 searchForm.addEventListener('submit', event => { event.preventDefault(); void search(); });
 async function search(): Promise<void> {
@@ -392,13 +410,15 @@ async function searchMore(): Promise<void> {
 }
 function appendSearch(cards: Card[]): void {
   for (const c of cards) {
-    const b = button(`${c.printed_name ?? c.name}　${c.set.toUpperCase()} #${c.collector_number} · ${c.lang}`, () => { currentHistoryGeneration = null; void openCard(c, '手動検索で選択'); });
+    const b = button(`${japaneseName(c) ?? c.name}　${c.set.toUpperCase()} #${c.collector_number} · ${c.lang}`, () => { currentHistoryGeneration = null; void openCard(c, '手動検索で選択'); });
     searchResults.append(b);
   }
 }
-async function openCard(c: Card, origin: string, reveal = true, selectedFinish?: string, live = false): Promise<void> {
+let confirmedFace: {id:string;faceIndex:number} | null=null;
+async function openCard(c: Card, origin: string, reveal = true, selectedFinish?: string, live = false, faceIndex?: number): Promise<void> {
   if (!live) stopCamera('カメラは停止中 · カード情報を表示しています'); detailRequest?.abort(); const request = new AbortController(); detailRequest = request; const generation = ++detailGeneration;
-  printingCards = [c]; jp = c.lang === 'ja' ? c : null; printStatus = '版・言語の一覧を全ページ取得中…'; source = origin;
+  if(faceIndex!==undefined)confirmedFace={id:c.id,faceIndex};else if(confirmedFace?.id!==c.id)confirmedFace=null;
+  printingCards = [c]; printStatus = '版・言語の一覧を全ページ取得中…'; source = origin;
   void session.select(c, selectedFinish ?? (c.finishes.includes('nonfoil') ? 'nonfoil' : c.finishes[0] ?? 'nonfoil'));
   result.hidden = false; renderResult();
   if (reveal) showDrawer('result');
@@ -406,7 +426,6 @@ async function openCard(c: Card, origin: string, reveal = true, selectedFinish?:
     const cards = await repo.printings(c.oracle_id, request.signal);
     if (generation !== detailGeneration) return;
     printingCards = cards.some(x => x.id === c.id) ? cards : [c, ...cards];
-    jp = printingCards.find(x => x.lang === 'ja' && x.set === c.set && x.collector_number === c.collector_number) ?? printingCards.find(x => x.lang === 'ja') ?? null;
     printStatus = `${printingCards.length}版・言語（全ページ）`; renderResult();
   } catch (error) { if (generation === detailGeneration) { printStatus = errorText(error, '版一覧を取得できません。'); renderResult(); } }
 }
@@ -416,7 +435,7 @@ function options(select: HTMLSelectElement, entries: [string, string][], selecte
 function choose(c: Card, finish = session.value.finish): void {
   const available = c.finishes.includes(finish) ? finish : c.finishes[0] ?? 'nonfoil';
   source = '手動指定 · 認識結果で変更されません';
-  if (currentHistoryGeneration !== null) { history.update(currentHistoryGeneration, c, available); historyView.update(history.allEntries); }
+  if (currentHistoryGeneration !== null) { history.update(currentHistoryGeneration, c, available); historyView.update(history.allEntries,historyDisplayNames); }
   void session.select(c, available);
 }
 function renderResult(): void {
@@ -426,10 +445,10 @@ function renderResult(): void {
   const focusLabel = focused?.getAttribute('aria-label');
   const focusText = focused && ['BUTTON', 'SUMMARY'].includes(focused.tagName) ? focused.textContent : null;
   const heading = el('div', '', 'result-heading'); const identity = el('div', '', 'identity');
-  identity.append(el('h2', jp?.printed_name ?? c.printed_name ?? c.name), el('p', c.name, 'muted'), el('p', `${c.set.toUpperCase()} #${c.collector_number} · ${c.lang}`, 'small muted'), el('p', source, 'eyebrow'), button('スキャンに戻る', () => {
+  identity.append(el('h2', japaneseName(japaneseDisplay(c,printingCards) ?? c) ?? c.name), el('p', c.name, 'muted'), el('p', `${c.set.toUpperCase()} #${c.collector_number} · ${c.lang}`, 'small muted'), el('p', source, 'eyebrow'), button('スキャンに戻る', () => {
     closeDrawer(); start.focus({ preventScroll: true });
   }));
-  referenceImage.update(c); heading.append(referenceImage.node, identity); nodes.push(heading);
+  referenceImage.update(c,confirmedFace?.id===c.id?confirmedFace.faceIndex:undefined); heading.append(referenceImage.node, identity); nodes.push(heading);
   formatLegality.update(c.id, c.legalities); nodes.push(formatLegality.node);
   const controls = el('div', '', 'controls');
   const language = el('select'); language.setAttribute('aria-label', '選択版の言語');
@@ -470,7 +489,7 @@ function renderResult(): void {
   nodes.splice(2, 0, priceBox);
   nodes.splice(3, 0, button('次のカードをスキャン', () => { void startCamera(); }, 'primary'));
   const rules = el('details', '', 'card-rules'); rules.open = result.querySelector<HTMLDetailsElement>('.card-rules')?.open ?? false; rules.append(el('summary', 'カード本文・ルール'));
-  const japanese = c.lang === 'ja' ? c : jp;
+  const japanese = japaneseDisplay(c,printingCards);
   rules.append(el('h3', '日本語の印刷情報'), el('p', japanese ? `表示用の日本語情報：${japanese.set.toUpperCase()} #${japanese.collector_number} · ja（価格対象は上の選択版）` : '日本語情報なし。英語Oracleを参照してください。', 'small muted'));
   if (japanese) for (const face of japanese.card_faces ?? [japanese]) rules.append(facePanel(face, true));
   rules.append(el('h3', '英語 Oracle（現在のルール本文）'));
@@ -486,7 +505,7 @@ function renderResult(): void {
   mark('result-render');
 }
 function facePanel(face: Face, japanese: boolean): HTMLElement {
-  const box = el('article', '', 'face'); box.append(el('h4', japanese ? face.printed_name ?? face.name : face.name), el('p', `${face.mana_cost ?? ''}　${japanese ? face.printed_type_line ?? face.type_line ?? '' : face.type_line ?? ''}`, 'muted'), el('p', japanese ? face.printed_text ?? '日本語印刷本文なし' : face.oracle_text ?? 'Oracle本文なし', 'rules'));
+  const box = el('article', '', 'face'); box.append(el('h4', japanese ? japaneseFaceName(face) ?? '日本語名は利用できません' : face.name), el('p', `${face.mana_cost ?? ''}　${japanese ? face.printed_type_line ?? face.type_line ?? '' : face.type_line ?? ''}`, 'muted'), el('p', japanese ? face.printed_text ?? '日本語印刷本文なし' : face.oracle_text ?? 'Oracle本文なし', 'rules'));
   return box;
 }
 mark('shell-ready');

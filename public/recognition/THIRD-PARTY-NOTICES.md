@@ -7,7 +7,8 @@ repository and retain its AGPL-3.0 terms. Full license: `LICENSE-AGPL-3.0.txt`.
 Authors and contributors retain their copyrights. No separate commercial or
 noncommercial license has been obtained. The worker is modified to pin assets,
 force one-thread WASM, verify model hashes, bound downloads, allow a local asset
-mirror, retain init messages during runtime import, and return a margin between distinct card identities. The catalog client
+mirror, retain init messages during runtime import, return a margin between distinct card identities, and preserve validated catalog
+face indices through search and frame results (absent/invalid indices default to front). The catalog client
 is modified to retain a previously complete,
 compatible cached snapshot when an update fails. Runtime import and local gzip
 transport were corrected. This application is not represented as MIT licensed.
