@@ -89,7 +89,7 @@ const tentativeContent=el('div'); tentativeContent.append(el('span','もしか�
 const tentativeActions=el('div','','actions'); tentativeActions.append(confirm,dismiss); const tentativeSummary=el('div','','candidate-summary'); tentativeSummary.append(tentativeReference.node,tentativeContent);
 const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='candidate-details';tentativeDetails.setAttribute('aria-label','候補の詳細');tentativeDetails.setAttribute('role','region');tentativeDetails.tabIndex=0;
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
-tentativeSummary.append(tentativePrice); tentativeDetails.append(tentativeExpansion,tentativeMessage,tentativeFormats.node,tentativeSources,tentativeRules);
+tentativeSummary.append(tentativePrice,tentativeFormats.node); tentativeDetails.append(tentativeExpansion,tentativeMessage,tentativeSources,tentativeRules);
 tentativePanel.append(tentativeSummary,tentativeActions,tentativeDetails,announcement);
 const diagnostics=el('p','類似度 — · margin —','small');
 const settingsPanel=el('details','','recognition-settings'); settingsPanel.append(el('summary','認識設定（デバッグ）'),el('p','このタブのみ。再読み込みで初期値に戻ります。類似度は未較正の cosine 値で、確率ではありません。','small'));
@@ -248,7 +248,7 @@ function presentSuggestion(next: Suggestion | null):void {
   // Commit the verified physical snapshot and its UI together; A stays usable until here.
   suggestion=next;loadingSuggestion=null;suggestionJapanese=null;japaneseSnapshots.cancelExcept(null);candidateSession.reset();
   tentativeReference.clear();tentativeFormats.clear();tentativePrice.replaceChildren();tentativeSources.replaceChildren();
-  tentativeSummary.prepend(tentativeReference.node);tentativeDetails.insertBefore(tentativeFormats.node,tentativeSources);tentativePrice.classList.add('price-box');
+  tentativeSummary.prepend(tentativeReference.node);tentativeSummary.append(tentativeFormats.node);tentativePrice.classList.add('price-box');
   tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
   tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
   tentativeEnglish.textContent=`英語：${card.name}`;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
