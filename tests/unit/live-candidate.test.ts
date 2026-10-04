@@ -33,3 +33,11 @@ it('versions recognized faces immutably; absent/invalid faces default to front',
   const observed=live.observe({...c,faceIndex} as typeof c,3)!;expect(observed.faceIndex).toBe(0);
  }
 });
+
+it('retains the same pending metadata version through transient observations (synthetic)',()=>{
+ const live=new LiveCandidate();const a=live.observe(c,0)!;
+ for(const observation of [{...c,cardPresent:false},{...c,cornersValid:false},{...c,score:.1},{...c,cardId:null}]) {
+  expect(live.observe(observation,100)?.version).toBe(a.version);expect(live.current(a)).toBe(true);
+ }
+ expect(live.observe(c,200)?.version).toBe(a.version);
+});

@@ -5,7 +5,7 @@ const a={id:'continuous-a',oracle_id:'oracle-a',name:'Synthetic Alpha',lang:'en'
 const b={...a,id:'continuous-b',oracle_id:'oracle-b',name:'Synthetic Beta'};
 async function installSyntheticFlow(page: Page) {
  await page.addInitScript(()=>{
-  const state={id:'continuous-a',oracle:'oracle-a',present:true,hold:false,frames:0,score:.623,margin:.01,latency:10,timings:[] as {frame:number;dispatchedAt:number;completedAt:number|undefined;present:boolean}[],completionWaiters:[] as (()=>void)[]};Object.assign(window,{continuousProbe:state});
+  const state={id:'continuous-a',oracle:'oracle-a',present:true,cornersValid:true,hold:false,frames:0,score:.623,margin:.01,latency:10,timings:[] as {frame:number;dispatchedAt:number;completedAt:number|undefined;present:boolean}[],completionWaiters:[] as (()=>void)[]};Object.assign(window,{continuousProbe:state});
   navigator.mediaDevices.getUserMedia=async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;c.getContext('2d')!.fillRect(0,0,1280,720);return c.captureStream(5);};
   class SyntheticWorker {
    onmessage:((e:{data:unknown})=>void)|null=null;
@@ -15,7 +15,7 @@ async function installSyntheticFlow(page: Page) {
     if(timing)state.timings.push(timing);
     setTimeout(()=>{
      if(timing)timing.completedAt=performance.now();
-     this.onmessage?.({data:data.type==='init'?{type:'ready',catalogVersion:52}:{type:'result',cardId:snapshot.id,scryfallOracleId:snapshot.oracle,cardPresent:snapshot.present,cornersValid:snapshot.present,corners:[[.1,.1],[.9,.1],[.9,.9],[.1,.9]],score:snapshot.score,margin:snapshot.margin}});
+     this.onmessage?.({data:data.type==='init'?{type:'ready',catalogVersion:52}:{type:'result',cardId:snapshot.id,scryfallOracleId:snapshot.oracle,cardPresent:snapshot.present,cornersValid:snapshot.present&&snapshot.cornersValid,corners:[[.1,.1],[.9,.1],[.9,.9],[.1,.9]],score:snapshot.score,margin:snapshot.margin}});
      // Resolve after the real loop's result continuation updates state and schedules its delay.
      if(timing)queueMicrotask(()=>state.completionWaiters.splice(0).forEach(resolve=>resolve()));
     },data.type==='init'?10:snapshot.latency);}
@@ -233,4 +233,39 @@ test('progressive candidate FX preserves focus, scroll and physical image DOM (S
  const control=page.getByRole('button',{name:'これです',exact:true});await control.focus();const y=await page.evaluate(()=>{(window as any).candidateImage=document.querySelector('.tentative img');document.querySelector('.candidate-details')!.scrollTop=10;return scrollY;});const internal=await page.locator('.candidate-details').evaluate(n=>n.scrollTop);release();
  await expect(page.locator('.tentative .price')).toHaveText('概算 ￥150');expect(await page.locator('.candidate-details').evaluate(n=>n.scrollTop)).toBe(internal);await expect(control).toBeFocused();expect(await page.evaluate(()=>scrollY)).toBe(y);expect(await page.evaluate(()=>(window as any).candidateImage===document.querySelector('.tentative img'))).toBe(true);await expect(page.locator('.scan-history-row')).toHaveCount(0);
  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+
+for(const outcome of ['success','failure','confirm'] as const)test(`sticky verified A remains actionable during absent frames and pending B ${outcome} (SYNTHETIC)`,async({page})=>{
+ await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);let requested=false;
+ await page.route('https://api.scryfall.com/cards/continuous-b',async r=>{requested=true;await pending;await r.fulfill(outcome==='failure'?{status:503,json:{}}:{json:b}).catch(()=>{});});
+ await page.goto('/');await closeRoute(page);await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ const panel=page.locator('.tentative');await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{present:false}));await page.waitForTimeout(800);
+ await expect(panel).toBeVisible();await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{present:true,score:.1}));await page.waitForTimeout(400);await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b',score:.8}));await expect.poll(()=>requested).toBe(true);
+ await expect(panel).toBeVisible();await expect(panel).toContainText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(0);
+ if(outcome==='confirm') {await page.evaluate(()=>Object.assign((window as any).continuousProbe,{present:false}));await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.result h2')).toHaveText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(1);}
+ release();
+ if(outcome==='success')await expect(panel).toContainText('Synthetic Beta');else {await page.waitForTimeout(800);if(outcome==='confirm')await expect(panel).toBeHidden();else await expect(panel).toContainText('Synthetic Alpha');}
+});
+
+test('sticky replacement is atomic and superseded physical metadata never wins (SYNTHETIC)',async({page})=>{
+ await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);let requested=false;
+ const c={...b,id:'continuous-c',oracle_id:'oracle-c',name:'Synthetic Gamma'};
+ await page.route('https://api.scryfall.com/cards/continuous-b',async r=>{requested=true;await pending;await r.fulfill({json:b}).catch(()=>{});});
+ await page.route('https://api.scryfall.com/cards/continuous-c',r=>r.fulfill({json:c}));
+ await page.goto('/');await closeRoute(page);await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ const panel=page.locator('.tentative');await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>{
+  const panel=document.querySelector<HTMLElement>('.tentative')!;const hidden:boolean[]=[];Object.assign(window,{stickyHidden:hidden});
+  new MutationObserver(records=>{for(const record of records)if(record.attributeName==='hidden')hidden.push(panel.hidden===true);}).observe(panel,{attributes:true});
+  Object.assign((window as any).continuousProbe,{cornersValid:false});
+ });await page.waitForTimeout(400);await expect(panel).toBeVisible();
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{cornersValid:true,id:null,oracle:null,score:null}));await page.waitForTimeout(400);await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b',score:.8}));await expect.poll(()=>requested).toBe(true);await expect(panel).toContainText('Synthetic Alpha');
+ await page.evaluate(()=>Object.assign((window as any).continuousProbe,{id:'continuous-c',oracle:'oracle-c'}));await expect(panel).toContainText('Synthetic Gamma');release();await page.waitForTimeout(700);
+ await expect(panel).toContainText('Synthetic Gamma');await expect(panel).not.toContainText('Synthetic Beta');expect(await page.evaluate(()=>(window as any).stickyHidden)).not.toContain(true);
+ await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('body')).not.toContainText('continuous-c');
+ await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.result h2')).toHaveText('Synthetic Gamma');
 });

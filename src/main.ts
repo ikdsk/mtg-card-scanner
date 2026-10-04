@@ -175,6 +175,7 @@ const snapshots = new CandidateMetadata((id:string,signal:AbortSignal)=>candidat
 const japaneseSnapshots=new CandidateMetadata((oracle:string,signal:AbortSignal)=>candidateRepo.printings(oracle,signal));
 const candidateFx=new CandidateMetadata((_key:string,signal:AbortSignal)=>fx.latest(signal));
 const candidateSession=new ResultSession((id)=>snapshots.get(id),()=>candidateFx.get('USDJPY'),renderCandidatePrice);
+let loadingSuggestion: Suggestion | null=null;
 let suggestion: Suggestion | null=null; let suggestionCard: Card | null=null; let suggestionJapanese: Card | null=null;
 let lastAnnouncement=-Infinity;
 type ActivationGesture = { snapshot: Suggestion | null; key: string | null };
@@ -212,7 +213,7 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
+function hideSuggestion():void {loadingSuggestion=null;snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
@@ -220,12 +221,18 @@ function applySettings(next: RecognitionSettings):void {
 }
 function presentSuggestion(next: Suggestion | null):void {
  if(!next){hideSuggestion();return;}
- const changed=suggestion?.version!==next.version;suggestion=next;tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
- if(!changed)return;
- snapshots.cancelExcept(next.cardId);japaneseSnapshots.cancelExcept(null);candidateSession.reset();tentativeReference.clear();tentativeFormats.clear();tentativeEnglish.textContent='';tentativeExpansion.textContent='';tentativeName.textContent='';suggestionCard=null;suggestionJapanese=null;tentativeSummary.prepend(tentativeReference.node);tentativeDetails.insertBefore(tentativeFormats.node,tentativeSources);tentativeRules.replaceChildren();tentativePrice.classList.add("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カード情報を確認中…';tentativeMessage.textContent='カード情報を確認中…';
+ if(suggestion?.version===next.version){tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;return;}
+ if(loadingSuggestion?.version===next.version)return;
+ loadingSuggestion=next;snapshots.cancelExcept(next.cardId);
+ if(!suggestion){emptyCandidate.hidden=false;emptyCandidate.textContent='カード情報を確認中…';}
  void snapshots.get(next.cardId).then(card=>{
-  if(!suggestion || !tentative.current(next))return;
-  if(card.id!==next.cardId || !card.name.trim() || card.name.trim()===card.id || card.name.trim()===card.oracle_id){emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
+  if(loadingSuggestion?.version!==next.version || !tentative.current(next))return;
+  if(card.id!==next.cardId || !card.name.trim() || card.name.trim()===card.id || card.name.trim()===card.oracle_id){if(!suggestion)emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
+  // Commit the verified physical snapshot and its UI together; A stays usable until here.
+  suggestion=next;loadingSuggestion=null;suggestionJapanese=null;japaneseSnapshots.cancelExcept(null);candidateSession.reset();
+  tentativeReference.clear();tentativeFormats.clear();tentativePrice.replaceChildren();tentativeSources.replaceChildren();
+  tentativeSummary.prepend(tentativeReference.node);tentativeDetails.insertBefore(tentativeFormats.node,tentativeSources);tentativePrice.classList.add('price-box');
+  tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
   tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
   tentativeEnglish.textContent=`英語：${card.name}`;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
   tentativeExpansion.textContent=`${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
@@ -233,11 +240,11 @@ function presentSuggestion(next: Suggestion | null):void {
   void candidateSession.select(card,finish);
   if(japaneseName(card))return;
   void japaneseSnapshots.get(card.oracle_id).then(cards=>{
-   if(!suggestion||!tentative.current(next))return;
+   if(suggestion?.version!==next.version)return;
    const japanese=japaneseDisplay(card,cards);suggestionJapanese=japanese;
    tentativeName.textContent=japanese ? `日本語：${japaneseName(japanese)}` : '日本語名は利用できません';renderCandidateRules(card,japanese??null);
-  }).catch(()=>{if(suggestion&&tentative.current(next))tentativeName.textContent='日本語名は利用できません';});
- }).catch(()=>{if(suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
+  }).catch(()=>{if(suggestion?.version===next.version)tentativeName.textContent='日本語名は利用できません';});
+ }).catch(()=>{if(loadingSuggestion?.version===next.version&&!suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
 }
 function renderCandidateRules(card:Card,japanese:Card|null):void {
  const nodes:HTMLElement[]=[el('h3','日本語の印刷情報')];
@@ -256,10 +263,10 @@ function renderCandidatePrice():void {
  nodes.push(el('p',value.fx?`Frankfurter / ECB · 1 USD = ${value.fx.jpyPerUsd} JPY · 最新公表日 ${value.fx.asOf}`:value.fxError?'為替を取得できません。USDのみ表示します。':'為替を確認中（取得できなければUSDのみ）','small muted'));
  tentativePrice.replaceChildren(...nodes.filter((node,index)=>index<2||node.classList.contains('usd')));tentativeSources.replaceChildren(...nodes.filter((node,index)=>index>=2&&!node.classList.contains('usd')));
 }
-function dismissSuggestion():void {const captured=activationSnapshot(dismiss);if(captured){tentative.dismiss(captured);if(suggestion?.version===captured.version)hideSuggestion();}}
+function dismissSuggestion():void {const captured=activationSnapshot(dismiss);if(captured&&suggestion?.version===captured.version){tentative.dismiss(captured);tentative.reset();hideSuggestion();}}
 function confirmSuggestion():void {
  const captured=activationSnapshot(confirm);
- if(!captured || !tentative.current(captured) || suggestion?.version!==captured.version)return;
+ if(!captured || suggestion?.version!==captured.version)return;
  const card=suggestionCard;if(!card || card.id!==captured.cardId){tentativeMessage.textContent='カード情報を確認できません。取得完了後に再確認してください。';return;}
  const displayName=suggestionJapanese ? japaneseName(suggestionJapanese) : japaneseName(card);
  if(displayName){historyDisplayNames.delete(card.id);historyDisplayNames.set(card.id,displayName);if(historyDisplayNames.size>100)historyDisplayNames.delete(historyDisplayNames.keys().next().value!);}

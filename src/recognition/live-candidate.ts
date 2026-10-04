@@ -15,7 +15,7 @@ export class LiveCandidate {
   } else { this.absentSince=null; this.absentCount=0; }
   const identity=c.oracleId || c.cardId;
   if(c.cardPresent && c.cornersValid && c.score!==null && Number.isFinite(c.score) && c.score>=this.threshold && identity && identity!==this.dismissed) this.dismissed=null;
-  if(!c.cardPresent || !c.cornersValid || !c.cardId || !identity || c.score===null || !Number.isFinite(c.score) || c.score<this.threshold || (this.suppressed.has(identity)||this.dismissed===identity)) { this.pending=null; return null; }
+  if(!c.cardPresent || !c.cornersValid || !c.cardId || !identity || c.score===null || !Number.isFinite(c.score) || c.score<this.threshold || (this.suppressed.has(identity)||this.dismissed===identity)) { return this.pending; }
   const faceIndex=c.faceIndex===1?1:0;
   if(this.pending?.faceIndex===faceIndex && this.pending?.cardId===c.cardId && this.pending.identity===identity) this.pending={...this.pending,score:c.score};
   else this.pending={cardId:c.cardId,identity,faceIndex,score:c.score,version:++this.version};
