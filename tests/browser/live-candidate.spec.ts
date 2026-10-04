@@ -110,8 +110,8 @@ test('delay and both absence controls change capture/rearm; overlay expiry chang
  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('320px proposal stays in immersive viewport and network is coalesced (SYNTHETIC)',async({page},info)=>{
- await page.setViewportSize({width:320,height:740});await installSyntheticFlow(page);let requests=0;let providerRequests=0;page.on('request',r=>{if(r.url().endsWith('/cards/continuous-a'))requests++;if(r.url().includes('api.scryfall.com')||r.url().includes('api.frankfurter.dev'))providerRequests++;});
- await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(6);expect(requests).toBe(1);expect(providerRequests).toBe(3);
+ await page.setViewportSize({width:320,height:740});await installSyntheticFlow(page);let requests=0;let providerRequests=0;let setRequests=0;page.on('request',r=>{if(r.url().endsWith('/cards/continuous-a'))requests++;if(r.url().startsWith('https://api.scryfall.com/sets/'))setRequests++;else if(r.url().includes('api.scryfall.com')||r.url().includes('api.frankfurter.dev'))providerRequests++;});
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(6);expect(requests).toBe(1);expect(providerRequests).toBe(3);expect(setRequests).toBe(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);await page.screenshot({path:info.outputPath('tentative-320.png')});await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('settings discard in-flight old evidence without restarting camera (SYNTHETIC)',async({page})=>{
@@ -125,7 +125,7 @@ test('file proposal confirms exactly one observation with no automatic repeat (S
  await installSyntheticFlow(page);await page.goto('/');await page.evaluate(()=>{Object.assign((window as any).continuousProbe,{score:.95,margin:.1,latency:600});});
  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=2;return c.toDataURL().split(',')[1]!;});
  await page.locator('#local-image').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
- await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
+ await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect(page.locator('.camera-status')).not.toContainText('候補を絞れませんでした');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
  expect(await page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(1);await page.waitForTimeout(800);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');await expect(page.locator('.scan-history-row')).toHaveCount(1);
 });
 test('absence elapsed control alone delays rearm and reset restores every real value (SYNTHETIC)',async({page})=>{

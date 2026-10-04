@@ -71,6 +71,11 @@ for (const width of [320, 390, 1280]) {
   test(`uniform Japanese rectangles at ${width}px across every status`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await open(page);
+    // Geometry/keyboard test starts once provider hydration is finished.
+    // Late-update behavior is exercised separately; native Space may cancel
+    // if the result is detached by a card response between keydown and keyup.
+    await expect(page.locator('.result .price')).toHaveText('概算 ￥0');
+    await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
     const badges = page.locator('.format-icons button');
     await expect(badges.locator('.format-badge')).toHaveText(['スタン', 'パイオニア', 'モダン', 'レガシー', 'ヴィンテ', '統率者', 'パウパー']);
     const geometry = await badges.evaluateAll(nodes => nodes.map(node => {

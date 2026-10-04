@@ -395,8 +395,9 @@ async function scanFile(image: File): Promise<void> {
     const revision=evidenceRevision; mark('file-frame-start'); const candidate = await recognizer.frame(await createImageBitmap(canvas)); mark('file-frame-result', candidate);
     if (generation !== scanGeneration || revision!==evidenceRevision) return;
     diagnostics.textContent=`類似度 ${Number.isFinite(candidate.score)?candidate.score!.toFixed(3):'—'} · margin ${Number.isFinite(candidate.margin)?candidate.margin.toFixed(3):'—'}`;
-    presentSuggestion(tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now()));
-    cameraStatus.textContent = suggestion ? '画像の候補を「これです」で確認してください' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
+    const proposal = tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now());
+    presentSuggestion(proposal);
+    cameraStatus.textContent = proposal ? '画像の処理が完了しました。候補が表示されたら「これです」で確認してください。' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
   } catch (error) { if (generation === scanGeneration) cameraStatus.textContent = errorText(error, '画像を認識できません。'); }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera('背景に移動したため停止しました。カメラでスキャンから再開できます。'); });
