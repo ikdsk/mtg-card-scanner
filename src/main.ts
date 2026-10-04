@@ -6,6 +6,7 @@ import { ResultSession } from './ui/session.js';
 import { formatReferencePrice } from './domain/pricing.js';
 import { Recognizer } from './recognition/adapter.js';
 import { StabilityGate } from './recognition/gate.js';
+import { captureCameraFrame } from './ui/camera-geometry.js';
 
 const marks: { event: string; ms: number; detail?: unknown }[] = [];
 function mark(event: string, detail?: unknown): void { marks.push({ event, ms: performance.now(), detail }); if (marks.length > 300) marks.shift(); performance.clearMarks(event); performance.mark(event); }
@@ -17,8 +18,11 @@ const intro = el('section', '', 'intro'); intro.append(el('p', 'カードをか�
 const scan = el('section', '', 'panel scan-panel');
 const viewport = el('div', '', 'viewport');
 const video = el('video'); video.muted = true; video.playsInline = true; video.autoplay = true;
-const guide = el('div', '', 'guide'); guide.append(el('span', 'カードの四隅を枠に合わせてください'));
+const guide = el('div', '', 'guide'); guide.append(el('span', 'カードの四隅を画面内に入れてください'));
 viewport.append(video, guide);
+video.addEventListener('resize', () => {
+  if (video.videoWidth && video.videoHeight) viewport.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+});
 const cameraStatus = el('p', 'カメラは停止中', 'status'); cameraStatus.setAttribute('role', 'status');
 const modelStatus = el('p', '認識データはスキャン開始時に準備します', 'muted small'); modelStatus.setAttribute('role', 'status');
 const scanActions = el('div', '', 'actions');
@@ -89,11 +93,16 @@ async function startCamera(): Promise<void> {
   const ready = prepare();
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('カメラにはHTTPSまたはlocalhostが必要です。');
-    const obtained = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    // Optional standard constraint (not yet in our TypeScript DOM typings).
+    // Ask the browser to avoid cropping before the full-frame capture.
+    const videoConstraints: MediaTrackConstraints & { resizeMode: ConstrainDOMString } = {
+      facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, resizeMode: { ideal: 'none' },
+    };
+    const obtained = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
     if (generation !== scanGeneration || !active) { obtained.getTracks().forEach(track => track.stop()); return; }
     stream = obtained; video.srcObject = stream; await video.play();
     if (generation !== scanGeneration || !active) return;
-    cameraStatus.textContent = 'カメラ映像を表示中 · カード全体を枠へ'; mark('camera-video');
+    cameraStatus.textContent = 'カメラ映像を表示中 · カード全体を画面内へ'; mark('camera-video');
     const success = await ready;
     if (success && generation === scanGeneration && active) void loop(generation);
   } catch (error) {
@@ -102,12 +111,7 @@ async function startCamera(): Promise<void> {
   }
 }
 async function captureVideo(): Promise<ImageBitmap> {
-  // Same cover geometry as the 3:4 preview; include padding around the guide.
-  const vw = video.videoWidth; const vh = video.videoHeight;
-  const displayAspect = 3 / 4;
-  const viewW = Math.min(vw, vh * displayAspect); const viewH = viewW / displayAspect;
-  const sx = (vw - viewW) / 2 + viewW * 0.05; const sy = (vh - viewH) / 2 + viewH * 0.03;
-  return createImageBitmap(video, Math.round(sx), Math.round(sy), Math.round(viewW * 0.9), Math.round(viewH * 0.94), { resizeWidth: 720, resizeHeight: 1003 });
+  return captureCameraFrame(video);
 }
 async function loop(generation: number): Promise<void> {
   if (!active || generation !== scanGeneration) return;
@@ -119,7 +123,7 @@ async function loop(generation: number): Promise<void> {
     const candidate = await recognizer.frame(bitmap); mark('frame-result', candidate.timing);
     if (generation !== scanGeneration || !active) return;
     const id = gate.observe(candidate);
-    cameraStatus.textContent = id ? '候補を固定しました。版・言語・加工を確認してください。' : 'カード全体を枠へ · 反射を避けて少し静止してください';
+    cameraStatus.textContent = id ? '候補を固定しました。版・言語・加工を確認してください。' : 'カード全体を画面内へ · 反射を避けて少し静止してください';
     if (id) { stopCamera('認識候補を固定しました'); mark('candidate-stable'); void openId(id, '端末内認識の候補 · 実物の版・言語・加工は未確認'); return; }
   } catch (error) {
     if (generation === scanGeneration) { modelReady = false; modelRetry.hidden = false; stopCamera(errorText(error, '認識できません。名前検索も利用できます。')); }
