@@ -39,7 +39,7 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
         Object.defineProperty(window, 'Worker', { value: SyntheticRejectingWorker });
       });
       await page.goto(baseURL!);
-      await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+      await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
       await page.waitForFunction(() => (window as unknown as { geometryProbe: { inputs: unknown[] } }).geometryProbe.inputs.length > 0);
       const preview = await page.locator('video').evaluate(video => {
         const v = video as HTMLVideoElement;
@@ -74,7 +74,7 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
       for (const [index, expected] of [19, 93, 168, 242].entries()) expect(Math.abs(input.pixels[index]! - expected)).toBeLessThan(4);
       await page.getByRole('button', { name: '停止', exact: true }).click();
       expect(await page.evaluate(() => (window as unknown as { geometryProbe: { tracks: MediaStreamTrack[] } }).geometryProbe.tracks.every(t => t.readyState === 'ended'))).toBe(true);
-      await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+      await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
       await page.waitForFunction(() => (document.querySelector('video')!.srcObject as MediaStream | null)?.getTracks().some(t => t.readyState === 'live'));
       // Dispatch the real handler with a synthetic background state.
       await page.evaluate(() => {
@@ -83,7 +83,7 @@ for (const [width, height] of [[1280, 720], [720, 1280]]) {
         Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange'));
       });
       expect(await page.evaluate(() => (window as unknown as { geometryProbe: { tracks: MediaStreamTrack[] } }).geometryProbe.tracks.every(t => t.readyState === 'ended'))).toBe(true);
-      await expect(page.getByRole('button', { name: 'カメラでスキャン', exact: true })).toBeEnabled();
+      await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeEnabled();
     } finally { await browser.close(); await rm(directory, { recursive: true }); }
   });
 }

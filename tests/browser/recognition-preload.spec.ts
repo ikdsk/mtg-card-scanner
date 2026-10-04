@@ -43,7 +43,7 @@ test('navigation starts preparation without camera permission or confirmation', 
 test('camera joins pending preload and starts inference once it completes', async ({ page }) => {
   await install(page); await page.goto('/');
   await expect.poll(async () => (await probe(page)).inits).toBe(1);
-  await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+  await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
   await expect.poll(async () => (await probe(page)).cameras).toBe(1);
   // Ring-buffer evidence counts preparation attempts, not just worker construction.
   await page.getByRole('button', { name: '情報・設定', exact: true }).click();
@@ -72,7 +72,7 @@ test('pagehide invalidates pending preload; explicit restart ignores old complet
   await install(page); await page.goto('/');
   await expect.poll(async () => (await probe(page)).inits).toBe(1);
   await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
-  await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+  await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
   await expect.poll(async () => (await probe(page)).inits).toBe(2);
   await page.evaluate(() => (window as any).preloadProbe.workers[0].reply({ type: 'ready', catalogVersion: 51 }));
   expect((await probe(page)).frames).toBe(0);
@@ -82,7 +82,7 @@ test('pagehide invalidates pending preload; explicit restart ignores old complet
   await expect(page.getByText(/端末内認識の準備完了/)).toBeVisible();
   expect((await probe(page)).frames).toBe(0);
   await expect(page.locator('video')).toHaveJSProperty('srcObject', null);
-  await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+  await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
   await expect.poll(async () => (await probe(page)).frames).toBeGreaterThan(0);
   expect((await probe(page)).inits).toBe(2);
 });

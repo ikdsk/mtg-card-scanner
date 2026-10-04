@@ -45,7 +45,7 @@ test('camera permission denial leaves manual search usable', async ({ page }) =>
     Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: async () => { throw new DOMException('Denied', 'NotAllowedError'); } } });
   });
   await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
-  await page.goto('/'); await closeRoute(page); await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+  await page.goto('/'); await closeRoute(page); await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
   await expect(page.getByText(/カメラの許可がありません/)).toBeVisible();
   await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('Lightning Bolt'); await page.getByRole('button', { name: '検索', exact: true }).click();
   await expect(page.getByRole('button', { name: /Lightning Bolt.*TST/ })).toBeVisible();
@@ -130,8 +130,8 @@ test('new manual result enters viewport once; delayed updates preserve scroll, f
   await expect(page.getByLabel('加工', { exact: true })).toHaveValue('foil');
   await expect(page.locator('.search-form input')).toHaveValue('Bolt');
   await page.getByRole('button', { name: 'スキャンに戻る', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'カメラでスキャン', exact: true })).toBeInViewport();
-  await expect(page.getByRole('button', { name: 'カメラでスキャン', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeFocused();
 });
 
 test('recognized candidate requires confirmation; result and return action can be deliberately viewed (SYNTHETIC worker/image)', async ({ page }) => {

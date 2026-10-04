@@ -133,7 +133,7 @@ for (const width of [320, 390, 1280]) {
     });
     await page.goto('/');
     await closeRoute(page);
-    await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+    await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
     await expect(page.locator('.tentative')).toContainText('Synthetic Formats');
     await page.getByRole('button', { name: '候補パネルを拡大', exact: true }).click();
     const badges = page.locator('.candidate-details .format-icons button');

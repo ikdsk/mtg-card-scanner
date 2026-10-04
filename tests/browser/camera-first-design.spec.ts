@@ -13,7 +13,7 @@ test('functional neutral camera-first shell has visible actions without automati
   await expect(page.locator('.intro')).toHaveCount(0);
   for (const width of [info.project.name === 'desktop' ? 1280 : 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
-    await expect(page.getByRole('button', { name: 'カメラでスキャン', exact: true })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeInViewport();
     await openRoute(page,'名前検索');
     await expect(page.getByRole('searchbox')).toBeInViewport();
     await expect(page.locator('#local-image')).toBeInViewport();await closeRoute(page);
@@ -25,7 +25,7 @@ test('functional neutral camera-first shell has visible actions without automati
   await page.setViewportSize(info.project.name === 'desktop' ? { width: 1280, height: 900 } : { width: 390, height: 844 });
   await page.screenshot({ path: info.outputPath(`${info.project.name}-initial.png`) });
   await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
-  await closeRoute(page); await page.getByRole('button', { name: 'カメラでスキャン', exact: true }).click();
+  await closeRoute(page); await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
   await expect(page.locator('.camera-status')).toContainText('カメラの許可がありません');
   await openRoute(page,'名前検索');await expect(page.getByRole('searchbox')).toBeEnabled();
 });

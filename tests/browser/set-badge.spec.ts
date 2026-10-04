@@ -13,7 +13,7 @@ async function setup(page:Page,imageFailure=false){
  await page.route('https://api.scryfall.com/cards/**',r=>{const url=r.request().url();const card=url.includes('badge-b')||url.includes('oracle-b')?b:a;return r.fulfill({json:url.includes('/search')?{data:[{...card,id:`jp-${card.id}`,lang:'ja',set:'jpn',set_name:'Japanese fallback edition',printed_name:'合成日本語名'}],has_more:false}:card});});
  await page.route('https://api.frankfurter.dev/**',r=>r.fulfill({json:{base:'USD',quote:'JPY',rate:150,date:'2026-10-02'}}));
  await page.route('https://svgs.scryfall.io/**',r=>{imageRequests++;return imageFailure?r.abort('failed'):r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8"/></svg>'});});
- await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await page.goto('/');await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
  await expect(page.locator('.tentative')).toContainText('合成日本語名');
  return ()=>imageRequests;
 }

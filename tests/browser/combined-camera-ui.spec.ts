@@ -67,7 +67,7 @@ test('combined accepted scan, physical override, older reopen and all widgets (S
   await expect(page.locator('[data-format="modern"]')).toHaveAttribute('data-status', 'legal');
   await expect(page.locator('.reference-image img')).toHaveAttribute('src', edition.image_uris.normal);
   await expect(page.locator('.scan-history-row')).toHaveCount(2);
-  await expect(page.getByRole('button', { name: '停止', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeEnabled();
   expect(await page.locator('.result').evaluate(node => node.children[1]?.classList.contains('format-legality'))).toBe(true);
   for (const width of [info.project.name === 'desktop' ? 1280 : 390, 320]) {
     await page.setViewportSize({ width, height: 844 });

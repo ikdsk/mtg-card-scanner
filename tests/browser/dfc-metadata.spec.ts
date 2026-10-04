@@ -15,7 +15,7 @@ async function install(page:Page,physical:Card=en,printings:Card[]=[en,...ja]) {
  await page.route('https://api.frankfurter.dev/**',r=>r.fulfill({status:503,json:{}}));
  await page.route('https://cards.scryfall.io/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="68"><rect width="48" height="68" fill="grey"/></svg>'}));
 }
-async function start(page:Page){await page.goto('/');await closeRoute(page);await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();}
+async function start(page:Page){await page.goto('/');await closeRoute(page);await page.getByRole('button',{name:'スキャン開始',exact:true}).click();}
 for(const language of ['en','ja'] as const)test(`DFC Japanese face names use usable fallback without changing physical ${language} image/price`,async({page})=>{
  const physical=language==='en'?en:ja[0]!;await install(page,physical);await start(page);
  await expect(page.locator('.tentative strong').first()).toHaveText('日本語：秘密を掘り下げる者 // 昆虫の逸脱者');
@@ -29,7 +29,7 @@ for(const language of ['en','ja'] as const)test(`DFC Japanese face names use usa
  await expect(page.getByLabel('選択版の言語')).toHaveValue(physical.lang);
 });
 test('recognized back initializes image; manual switch survives same-face observations and price; new face replaces version',async({page})=>{
- await install(page);await page.goto('/');await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await closeRoute(page);await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await install(page);await page.goto('/');await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await closeRoute(page);await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
  const image=page.locator('.tentative img');await expect(image).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
  await page.locator('.tentative').getByRole('button',{name:/^表面：/}).click();await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await page.waitForTimeout(800);await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);

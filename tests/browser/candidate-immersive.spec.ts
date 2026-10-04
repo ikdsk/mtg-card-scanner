@@ -13,7 +13,7 @@ async function setup(page:Page){
  await page.route('https://api.scryfall.com/**',r=>r.fulfill({json:r.request().url().includes('/search')?{data:[card],has_more:false}:card}));
  await page.route('https://api.frankfurter.dev/**',r=>r.fulfill({json:{base:'USD',quote:'JPY',rate:150,date:'2026-10-02'}}));
  await page.route('https://cards.scryfall.io/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="488" height="680"><rect width="488" height="680" fill="#4e5973"/><text x="20" y="150" fill="white" font-size="48">TEST ONLY</text></svg>'}));
- await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('合成イマーシブ');await expect(page.locator('.tentative .price')).toHaveText('概算 ￥300');
+ await page.goto('/');await page.getByRole('button',{name:'スキャン開始',exact:true}).click();await expect(page.locator('.tentative')).toContainText('合成イマーシブ');await expect(page.locator('.tentative .price')).toHaveText('概算 ￥300');
 }
 async function fitted(page:Page){
  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
@@ -117,7 +117,7 @@ test('auxiliary overlay never starts stopped camera and history close never rest
  await expect(page.getByRole('dialog',{name:'確定カード',exact:true})).toBeVisible();await closeRoute(page);
  for(const route of ['設定','名前検索','履歴'] as const){await openRoute(page,route);await expect(page.getByRole('dialog',{name:route,exact:true})).toBeVisible();await page.keyboard.press('Escape');}
  expect(await page.evaluate(()=>(window as any).immersiveStream.getTracks().every((t:MediaStreamTrack)=>t.readyState==='ended'))).toBe(true);
- await expect(page.getByRole('button',{name:'カメラでスキャン',exact:true})).toBeEnabled();await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await expect(page.getByRole('button',{name:'スキャン開始',exact:true})).toBeEnabled();await expect(page.locator('.scan-history-row')).toHaveCount(1);
 });
 
 test('focused settings field stays reachable when keyboard visual viewport shrinks (SYNTHETIC viewport event)',async({page},info)=>{

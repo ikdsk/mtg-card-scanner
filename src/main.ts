@@ -34,13 +34,20 @@ guide.hidden = true; viewport.append(video, overlayCanvas, guide);
 const cameraStatus = el('p', 'カメラは停止中', 'status camera-status'); cameraStatus.setAttribute('role', 'status');
 const modelStatus = el('p', '認識データを準備中', 'muted small'); modelStatus.setAttribute('role', 'status');
 const scanActions = el('div', '', 'actions');
-const start = button('カメラでスキャン', () => { void startCamera(); }, 'primary');
-const stop = button('停止', () => stopCamera('カメラを停止しました'));
+const start = button('', () => { if (active) stopCamera('カメラを停止しました'); else void startCamera(); }, 'primary scan-toggle');
+const cameraIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+for (const [name, value] of Object.entries({ viewBox: '0 0 24 24', width: '20', height: '20', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false' })) cameraIcon.setAttribute(name, value);
+const cameraOutline = document.createElementNS(cameraIcon.namespaceURI, 'path');
+cameraOutline.setAttribute('d', 'M3 6h4l2-3h6l2 3h4v15H3Z');
+const cameraLens = document.createElementNS(cameraIcon.namespaceURI, 'circle');
+cameraLens.setAttribute('cx', '12'); cameraLens.setAttribute('cy', '13'); cameraLens.setAttribute('r', '4');
+cameraIcon.append(cameraOutline, cameraLens);
+const scanLabel = el('span', 'スキャン開始'); start.append(cameraIcon, scanLabel);
 const modelRetry = button('認識の準備を再試行', () => { invalidatePreparation(); const generation = scanGeneration; void prepare().then(ok => { if (ok && active && generation === scanGeneration) void loop(generation); }); }); modelRetry.hidden = true;
 const file = el('input'); file.type = 'file'; file.accept = 'image/*'; file.id = 'local-image';
 const fileLabel = label('端末の画像でスキャン', file); fileLabel.className = 'file-button';
-scanActions.append(start, stop, fileLabel, modelRetry);
-const cameraInfo = el('div', '', 'camera-info'); cameraInfo.append(cameraStatus, detectionStatus, modelStatus);
+scanActions.append(start, fileLabel, modelRetry);
+const cameraInfo = el('div', '', 'camera-info'); cameraInfo.append(cameraStatus, modelStatus);
 scan.append(viewport, cameraInfo);
 const searchPanel = el('section', '', 'panel search-panel'); searchPanel.append(el('h2', 'カード名で検索'));
 const searchForm = el('form', '', 'search-form'); const query = el('input'); query.type = 'search'; query.placeholder = '例：稲妻 / Lightning Bolt'; query.required = true; query.setAttribute('aria-label', '日本語・英語のカード名');
@@ -84,7 +91,7 @@ const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='ca
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
 tentativeSummary.append(tentativePrice); tentativeDetails.append(tentativeExpansion,tentativeMessage,tentativeFormats.node,tentativeSources,tentativeRules);
 tentativePanel.append(tentativeSummary,tentativeActions,tentativeDetails,announcement);
-const diagnostics=el('p','類似度 — · margin —','small'); cameraInfo.append(diagnostics);
+const diagnostics=el('p','類似度 — · margin —','small');
 const settingsPanel=el('details','','recognition-settings'); settingsPanel.append(el('summary','認識設定（デバッグ）'),el('p','このタブのみ。再読み込みで初期値に戻ります。類似度は未較正の cosine 値で、確率ではありません。','small'));
 let settings: RecognitionSettings={...defaults}; let evidenceRevision=0;
 const settingsInputs=new Map<keyof RecognitionSettings,HTMLInputElement>();
@@ -322,15 +329,16 @@ function stopCamera(message?: string): void {
   scanGeneration++; evidenceRevision++; hideSuggestion(); tentative.newContext();for(const gesture of gestures.values())gesture.snapshot=null; active = false;  overlay.stop(); overlayCanvas.dataset.detected = 'false'; detectionStatus.textContent = 'カード検出なし';
   if (loopTimer) clearTimeout(loopTimer); loopTimer = null;
   stream?.getTracks().forEach(track => track.stop()); stream = null; video.srcObject = null;
-  start.disabled = false; stop.disabled = true; guide.hidden = true;
+  scanLabel.textContent = 'スキャン開始'; guide.hidden = true;
   if (message) cameraStatus.textContent = message;
   mark('camera-stop');
 }
 async function startCamera(): Promise<void> {
+  if (active) return;
   closeDrawer();
   currentHistoryGeneration = null;
   detailGeneration++; detailRequest?.abort(); session.reset();
-  stopCamera(); const generation = scanGeneration; active = true; start.disabled = true; stop.disabled = false;
+  stopCamera(); const generation = scanGeneration; active = true; scanLabel.textContent = '停止';
   cameraStatus.textContent = 'カメラの許可・起動を待っています'; mark('camera-start');
   const ready = prepare();
   try {
@@ -400,10 +408,9 @@ async function scanFile(image: File): Promise<void> {
     cameraStatus.textContent = proposal ? '画像の処理が完了しました。候補が表示されたら「これです」で確認してください。' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
   } catch (error) { if (generation === scanGeneration) cameraStatus.textContent = errorText(error, '画像を認識できません。'); }
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera('背景に移動したため停止しました。カメラでスキャンから再開できます。'); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera('背景に移動したため停止しました。スキャン開始から再開できます。'); });
 window.addEventListener('pagehide', () => { stopCamera(); invalidatePreparation(); });
 window.addEventListener('offline', () => { searchStatus.textContent = 'オフラインです。接続後に検索を再試行してください。'; });
-stop.disabled = true;
 void prepare();
 
 searchForm.addEventListener('submit', event => { event.preventDefault(); void search(); });
