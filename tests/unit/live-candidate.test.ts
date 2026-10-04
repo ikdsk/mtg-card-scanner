@@ -41,3 +41,13 @@ it('retains the same pending metadata version through transient observations (sy
  }
  expect(live.observe(c,200)?.version).toBe(a.version);
 });
+
+it('saving frozen A preserves newer B and suppresses A until sustained absence (synthetic)',()=>{
+ const live=new LiveCandidate();const a=live.observe(c,0)!;
+ const b=live.observe({...c,cardId:'synthetic-b',oracleId:'oracle-b'},100)!;
+ live.accepted(a.identity,true);
+ expect(live.current(b)).toBe(true);
+ expect(live.observe(c,200)?.version).toBe(b.version);
+ live.observe({...c,cardPresent:false},300);live.observe({...c,cardPresent:false},600);live.observe({...c,cardPresent:false},900);
+ expect(live.observe(c,1000)?.cardId).toBe(a.cardId);
+});

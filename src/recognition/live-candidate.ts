@@ -23,7 +23,7 @@ export class LiveCandidate {
  }
  current(snapshot: Suggestion): boolean { return this.pending?.version===snapshot.version && this.pending.cardId===snapshot.cardId; }
  dismiss(snapshot: Suggestion): void { this.dismissed=snapshot.identity; if(this.current(snapshot)) this.pending=null; }
- accepted(identity: string): void { this.suppressed.clear();this.suppressed.add(identity); this.pending=null; }
+ accepted(identity: string, preserveNewer = false): void { this.suppressed.clear();this.suppressed.add(identity); if(!preserveNewer||this.pending?.identity===identity)this.pending=null; }
  newContext(): void {this.reset();this.suppressed.clear();this.dismissed=null;}
  reset(threshold=this.threshold,rearmCount=this.rearmCount,rearmMs=this.rearmMs): void { this.threshold=threshold;this.rearmCount=rearmCount;this.rearmMs=rearmMs;this.pending=null;this.version++;this.absentCount=0;this.absentSince=null; }
 }

@@ -83,13 +83,15 @@ const tentativePanel = el('aside', '', 'tentative'); tentativePanel.hidden=true;
 const tentativeEnglish=el('p','','small');const tentativeExpansion=el('p','','small');const tentativePrice=el('div','','candidate-price');const tentativeFormats=new FormatLegality('candidate-format-disclosure');const tentativeReference=new ReferenceImage();
 const tentativeSet=new SetBadge();
 const tentativeName=el('strong'); const tentativeScore=el('span','','small');
-const tentativeMessage=el('p','','small'); const announcement=el('span','','sr-only'); announcement.setAttribute('role','status');
-const confirm=button('これです',()=>confirmSuggestion()); const dismiss=button('違う',()=>dismissSuggestion());
+const tentativeMessage=el('p','','small');tentativeMessage.setAttribute('role','status'); const announcement=el('span','','sr-only'); announcement.setAttribute('role','status');
+const confirm=button('履歴に保存',()=>confirmSuggestion());confirm.setAttribute('aria-label','履歴に保存'); const dismiss=button('別のカードを探す',()=>dismissSuggestion());
 const tentativeContent=el('div'); tentativeContent.append(el('span','もしかして？','eyebrow'),tentativeName,tentativeEnglish,tentativeSet.node,tentativeExpansion,tentativeScore,tentativeMessage);
 const tentativeActions=el('div','','actions'); tentativeActions.append(confirm,dismiss); const tentativeSummary=el('div','','candidate-summary'); tentativeSummary.append(tentativeReference.node,tentativeContent);
 const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='candidate-details';tentativeDetails.setAttribute('aria-label','候補の詳細');tentativeDetails.setAttribute('role','region');tentativeDetails.tabIndex=0;
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
-tentativeSummary.append(tentativePrice,tentativeFormats.node); tentativeDetails.append(tentativeExpansion,tentativeMessage,tentativeSources,tentativeRules);
+const nameDetails=button('',()=>openCandidateDetail(),'candidate-name-target');nameDetails.setAttribute('aria-label','カード名から詳細を見る');tentativeSummary.append(nameDetails);
+const imageDetails=button('',()=>openCandidateDetail(),'candidate-image-target');imageDetails.setAttribute('aria-label','画像から詳細を見る');tentativeSummary.append(imageDetails);
+tentativeSummary.append(tentativePrice,tentativeFormats.node); const manualVersion=button('版・言語・加工を変更',()=>openManualVersion());tentativeDetails.append(tentativeExpansion,tentativeMessage,manualVersion,tentativeSources,tentativeRules);
 tentativePanel.append(tentativeSummary,tentativeActions,tentativeDetails,announcement);
 const diagnostics=el('p','類似度 — · margin —','small');
 const settingsPanel=el('details','','recognition-settings'); settingsPanel.append(el('summary','認識設定（デバッグ）'),el('p','このタブのみ。再読み込みで初期値に戻ります。類似度は未較正の cosine 値で、確率ではありません。','small'));
@@ -115,10 +117,41 @@ const historyView = new ScanHistoryView(entry => {
 // modal overlay windows; the ordinary candidate dock stays nonmodal.
 const candidateDock=el('section','','candidate-dock');
 const dockToolbar=el('div','','dock-toolbar'); dockToolbar.append(el('span','もしかして？','eyebrow'));
-const expand=button('⌃',()=>setExpanded(true)); expand.setAttribute('aria-label','候補パネルを拡大'); expand.setAttribute('aria-controls',tentativeDetails.id);
-const contract=button('⌄',()=>setExpanded(false)); contract.setAttribute('aria-label','候補パネルを縮小'); contract.setAttribute('aria-controls',tentativeDetails.id);
-dockToolbar.append(expand,contract);
-const emptyCandidate=el('p','カードをかざすと候補が表示されます。「これです」で確認してください。','empty-candidate small');
+const viewDetails=button('詳細を見る',()=>openCandidateDetail());viewDetails.disabled=true;dockToolbar.append(viewDetails);
+const emptyCandidate=el('p','カードをかざすと情報が表示されます。保存は任意です。','empty-candidate small');
+const candidateDetail=el('dialog','','candidate-detail-sheet');candidateDetail.id='candidate-detail-sheet';
+for(const control of [viewDetails,nameDetails,imageDetails]){control.setAttribute('aria-controls',candidateDetail.id);control.setAttribute('aria-haspopup','dialog');control.setAttribute('aria-expanded','false');}
+candidateDetail.setAttribute('aria-label','カードの詳細');candidateDetail.setAttribute('aria-modal','true');
+const detailHeader=el('div','','detail-sheet-header');const detailClose=button('×',()=>closeCandidateDetail());detailClose.setAttribute('aria-label','閉じる');detailHeader.append(el('h2','カードの詳細'),detailClose);
+const detailBody=el('div','','detail-sheet-body');candidateDetail.append(detailHeader,detailBody);
+let detailTrigger:HTMLElement|null=null;
+let queuedVerified:{next:Suggestion;card:Card}|null=null;
+let savedVersion:number|null=null;
+let feedbackTimer:ReturnType<typeof setTimeout>|null=null;
+function openCandidateDetail():void {
+ if(!suggestionCard||candidateDetail.open)return;
+ for(const control of [viewDetails,nameDetails,imageDetails])control.setAttribute('aria-expanded','true');
+ detailTrigger=document.activeElement as HTMLElement;nameDetails.hidden=true;imageDetails.hidden=true;detailBody.append(tentativePanel);tentativeDetails.hidden=false;candidateDetail.showModal();scan.inert=true;candidateDock.inert=true;detailClose.focus({preventScroll:true});
+}
+function closeCandidateDetail():void {
+ if(!candidateDetail.open)return;
+ for(const control of [viewDetails,nameDetails,imageDetails])control.setAttribute('aria-expanded','false');
+ candidateDetail.close();nameDetails.hidden=false;imageDetails.hidden=false;tentativeDetails.hidden=true;candidateDock.insertBefore(tentativePanel,navigation);scan.inert=false;candidateDock.inert=false;
+ const queued=queuedVerified;queuedVerified=null;
+ if(queued){const pending=loadingSuggestion;commitSuggestion(queued.next,queued.card);loadingSuggestion=pending;}
+
+ if(detailTrigger?.isConnected)detailTrigger.focus({preventScroll:true});detailTrigger=null;
+}
+candidateDetail.addEventListener('cancel',event=>{event.preventDefault();closeCandidateDetail();});
+candidateDetail.addEventListener('keydown',event=>{
+ if(event.key!=='Tab')return;
+ const controls=[...candidateDetail.querySelectorAll<HTMLElement>('button,a[href],[tabindex]')].filter(n=>n.tabIndex>=0&&!n.matches(':disabled')&&n.checkVisibility({visibilityProperty:true}));
+ const first=controls[0],last=controls.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+});
+let swipe:{id:number;x:number;y:number}|null=null;
+detailHeader.addEventListener('pointerdown',event=>{if((event.target as Element).closest('button')||!event.isPrimary)return;swipe={id:event.pointerId,x:event.clientX,y:event.clientY};detailHeader.setPointerCapture(event.pointerId);});
+detailHeader.addEventListener('pointerup',event=>{const start=swipe;swipe=null;if(start?.id===event.pointerId&&event.clientY-start.y>=60&&Math.abs(event.clientX-start.x)<Math.abs(event.clientY-start.y))closeCandidateDetail();});
+detailHeader.addEventListener('pointercancel',()=>{swipe=null;});
 const navigation=el('nav','','panel-navigation'); navigation.setAttribute('aria-label','スキャナーの機能');
 const drawer=el('dialog','','utility-drawer'); drawer.setAttribute('aria-modal','true'); drawer.setAttribute('aria-label','スキャナーの補助画面');
 const drawerHeading=el('h2'); drawerHeading.id='drawer-heading';drawer.setAttribute('aria-labelledby',drawerHeading.id);
@@ -135,10 +168,10 @@ for(const route of Object.keys(routes) as (keyof typeof routes)[]) {
 }
 drawer.id='utility-drawer';drawer.append(drawerBar,drawerBody);
 candidateDock.append(dockToolbar,emptyCandidate,tentativePanel,navigation);
-viewport.append(header,actionPanel,cameraInfo);scan.replaceChildren(viewport);app.append(scan,candidateDock,drawer);
-function setExpanded(value:boolean):void {candidateDock.dataset.expanded=String(value);expand.disabled=value;contract.disabled=!value;expand.setAttribute('aria-expanded',String(value));contract.setAttribute('aria-expanded',String(value));tentativeDetails.hidden=!value;}
-setExpanded(false);
+viewport.append(header,actionPanel,cameraInfo);scan.replaceChildren(viewport);app.append(scan,candidateDock,drawer,candidateDetail);
+tentativeDetails.hidden=true;
 function showDrawer(route:keyof typeof routes):void {
+ closeCandidateDetail();
  if(!drawer.open)drawerTrigger=document.activeElement as HTMLElement;
  drawerHeading.textContent=routeNames[route];
  for(const [key,node] of Object.entries(routes))node.classList.toggle('route-active',key===route);
@@ -174,7 +207,7 @@ drawer.addEventListener('keydown',event=>{
 });
 
 // visualViewport handles browser bars and the software keyboard without page jumps.
-function fitViewport():void {const visual=window.visualViewport;const height=visual?.height??window.innerHeight;app.classList.toggle('compact-viewport',height<=550);app.classList.toggle('short-viewport',height<=400);app.style.height=`${visual?.height??window.innerHeight}px`;app.style.top=`${visual?.offsetTop??0}px`;app.style.left=`${visual?.offsetLeft??0}px`;app.style.width=`${visual?.width??window.innerWidth}px`;drawer.style.setProperty('--window-height',`${height}px`);drawer.style.setProperty('--window-width',`${visual?.width??window.innerWidth}px`);drawer.style.setProperty('--window-top',`${visual?.offsetTop??0}px`);drawer.style.setProperty('--window-left',`${visual?.offsetLeft??0}px`);if(drawer.open)requestAnimationFrame(revealDrawerFocus);}
+function fitViewport():void {const visual=window.visualViewport;const height=visual?.height??window.innerHeight;app.classList.toggle('compact-viewport',height<=550);app.classList.toggle('short-viewport',height<=400);app.style.height=`${visual?.height??window.innerHeight}px`;app.style.top=`${visual?.offsetTop??0}px`;app.style.left=`${visual?.offsetLeft??0}px`;app.style.width=`${visual?.width??window.innerWidth}px`;candidateDetail.style.setProperty('--window-height',`${height}px`);candidateDetail.style.setProperty('--window-width',`${visual?.width??window.innerWidth}px`);candidateDetail.style.setProperty('--window-top',`${visual?.offsetTop??0}px`);candidateDetail.style.setProperty('--window-left',`${visual?.offsetLeft??0}px`);drawer.style.setProperty('--window-height',`${height}px`);drawer.style.setProperty('--window-width',`${visual?.width??window.innerWidth}px`);drawer.style.setProperty('--window-top',`${visual?.offsetTop??0}px`);drawer.style.setProperty('--window-left',`${visual?.offsetLeft??0}px`);if(drawer.open)requestAnimationFrame(revealDrawerFocus);}
 fitViewport();window.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('scroll',fitViewport);
 
 let stream: MediaStream | null = null; let scanGeneration = 0; let active = false; let modelReady = false;
@@ -189,7 +222,9 @@ const tentative = new LiveCandidate();
 // next proposal. Repository instances still share the provider rate scheduler.
 const candidateRepo = new Repository();
 const snapshots = new CandidateMetadata((id:string,signal:AbortSignal)=>candidateRepo.card(id,signal));
-const japaneseSnapshots=new CandidateMetadata((oracle:string,signal:AbortSignal)=>candidateRepo.printings(oracle,signal));
+// A frozen display's Japanese lookup must not block verification of live B.
+const candidateJapaneseRepo=new Repository();
+const japaneseSnapshots=new CandidateMetadata((oracle:string,signal:AbortSignal)=>candidateJapaneseRepo.printings(oracle,signal));
 const candidateFx=new CandidateMetadata((_key:string,signal:AbortSignal)=>fx.latest(signal));
 const candidateSession=new ResultSession((id)=>snapshots.get(id),()=>candidateFx.get('USDJPY'),renderCandidatePrice);
 let loadingSuggestion: Suggestion | null=null;
@@ -230,23 +265,28 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {loadingSuggestion=null;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと候補が表示されます。「これです」で確認してください。';}
+function hideSuggestion():void {if(candidateDetail.open)return;viewDetails.disabled=true;queuedVerified=null;loadingSuggestion=null;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと情報が表示されます。保存は任意です。';}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
  for(const [key,input] of settingsInputs)input.value=String(settings[key]);settingsError.textContent='設定を適用しました。新しい観測から使用します。';diagnostics.textContent='類似度 — · margin —';
 }
 function presentSuggestion(next: Suggestion | null):void {
- if(!next){hideSuggestion();return;}
+ if(!next){if(savedVersion!==suggestion?.version)hideSuggestion();return;}
  if(suggestion?.version===next.version){tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;return;}
- if(loadingSuggestion?.version===next.version)return;
+ if(loadingSuggestion?.version===next.version||queuedVerified?.next.version===next.version)return;
  loadingSuggestion=next;snapshots.cancelExcept(next.cardId);
  if(!suggestion){emptyCandidate.hidden=false;emptyCandidate.textContent='カード情報を確認中…';}
  void snapshots.get(next.cardId).then(card=>{
   if(loadingSuggestion?.version!==next.version || !tentative.current(next))return;
   if(card.id!==next.cardId || !card.name.trim() || card.name.trim()===card.id || card.name.trim()===card.oracle_id){if(!suggestion)emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
+  if(candidateDetail.open){queuedVerified={next,card};loadingSuggestion=null;return;}
+  commitSuggestion(next,card);
+ }).catch(()=>{if(loadingSuggestion?.version===next.version&&!suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
+}
+function commitSuggestion(next:Suggestion,card:Card):void {
   // Commit the verified physical snapshot and its UI together; A stays usable until here.
-  suggestion=next;loadingSuggestion=null;suggestionJapanese=null;japaneseSnapshots.cancelExcept(null);candidateSession.reset();
+  savedVersion=null;viewDetails.disabled=false;confirm.textContent='履歴に保存';tentativeMessage.textContent='実物の版・言語・加工は未確認';suggestion=next;loadingSuggestion=null;suggestionJapanese=null;japaneseSnapshots.cancelExcept(null);candidateSession.reset();
   tentativeReference.clear();tentativeFormats.clear();tentativePrice.replaceChildren();tentativeSources.replaceChildren();
   tentativeSummary.prepend(tentativeReference.node);tentativeSummary.append(tentativeFormats.node);tentativePrice.classList.add('price-box');
   tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
@@ -262,7 +302,6 @@ function presentSuggestion(next: Suggestion | null):void {
    const japanese=japaneseDisplay(card,cards);suggestionJapanese=japanese;
    tentativeName.textContent=japanese ? `日本語：${japaneseName(japanese)}` : '日本語名は利用できません';renderCandidateRules(card,japanese??null);
   }).catch(()=>{if(suggestion?.version===next.version)tentativeName.textContent='日本語名は利用できません';});
- }).catch(()=>{if(loadingSuggestion?.version===next.version&&!suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
 }
 function renderCandidateRules(card:Card,japanese:Card|null):void {
  const nodes:HTMLElement[]=[el('h3','日本語の印刷情報')];
@@ -281,17 +320,36 @@ function renderCandidatePrice():void {
  nodes.push(el('p',value.fx?`Frankfurter / ECB · 1 USD = ${value.fx.jpyPerUsd} JPY · 最新公表日 ${value.fx.asOf}`:value.fxError?'為替を取得できません。USDのみ表示します。':'為替を確認中（取得できなければUSDのみ）','small muted'));
  tentativePrice.replaceChildren(...nodes.filter((node,index)=>index<2||node.classList.contains('usd')));tentativeSources.replaceChildren(...nodes.filter((node,index)=>index>=2&&!node.classList.contains('usd')));
 }
-function dismissSuggestion():void {const captured=activationSnapshot(dismiss);if(captured&&suggestion?.version===captured.version){tentative.dismiss(captured);tentative.reset();hideSuggestion();}}
+function openManualVersion():void {
+ const card=suggestionCard;const snapshot=suggestion;if(!card||!snapshot)return;
+ const saved=savedVersion===snapshot.version;
+ // Reopening correction must retain a previously chosen printing/language/finish.
+ const current=session.value;
+ const physical=current.card?.oracle_id===card.oracle_id?current.card:card;
+ const finish=current.card?.id===physical.id?current.finish:undefined;
+ closeCandidateDetail();if(!saved)currentHistoryGeneration=null;
+ void openCard(physical,'手動指定 · 実物の版・言語・加工を確認',true,finish,true,physical.id===card.id?snapshot.faceIndex:undefined);
+}
+function dismissSuggestion():void {
+ const captured=activationSnapshot(dismiss);if(!captured||suggestion?.version!==captured.version)return;
+ const name=suggestionJapanese?japaneseName(suggestionJapanese):suggestionCard?.name;
+ tentative.dismiss(captured);tentative.reset();closeCandidateDetail();hideSuggestion();query.value=name??'';showDrawer('search');query.focus({preventScroll:true});
+}
 function confirmSuggestion():void {
  const captured=activationSnapshot(confirm);
- if(!captured || suggestion?.version!==captured.version)return;
+ if(!captured || suggestion?.version!==captured.version||savedVersion===captured.version)return;
  const card=suggestionCard;if(!card || card.id!==captured.cardId){tentativeMessage.textContent='カード情報を確認できません。取得完了後に再確認してください。';return;}
  const displayName=suggestionJapanese ? japaneseName(suggestionJapanese) : japaneseName(card);
  if(displayName){historyDisplayNames.delete(card.id);historyDisplayNames.set(card.id,displayName);if(historyDisplayNames.size>100)historyDisplayNames.delete(historyDisplayNames.keys().next().value!);}
- evidenceRevision++;tentative.accepted(captured.identity);hideSuggestion();
+ savedVersion=captured.version;
+ // Preserve a newer pending B while suppressing the saved stationary A.
+ tentative.accepted(captured.identity,true);
+ confirm.textContent='保存しました ✓';tentativeMessage.textContent='保存しました ✓';announcement.textContent='保存しました ✓';
+ if(feedbackTimer)clearTimeout(feedbackTimer);
+ feedbackTimer=setTimeout(()=>{if(savedVersion===captured.version){confirm.textContent='履歴に保存';tentativeMessage.textContent='実物の版・言語・加工は未確認';}},1800);
  const event=++acceptedEvent;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
  history.accept(event,card,finish);currentHistoryGeneration=event;historyView.update(history.allEntries,historyDisplayNames);
- void openCard(card,'「これです」で確認 · 実物の版・言語・加工は未確認',false,finish,active,captured.faceIndex);
+ void openCard(card,'「履歴に保存」で保存 · 実物の版・言語・加工は未確認',false,finish,true,captured.faceIndex);
 }
 let acceptedEvent = 0;
 const recognizer = new Recognizer(message => { modelStatus.textContent = message; });
@@ -326,7 +384,7 @@ function errorText(error: unknown, fallback: string): string {
   return fallback;
 }
 function stopCamera(message?: string): void {
-  scanGeneration++; evidenceRevision++; hideSuggestion(); tentative.newContext();for(const gesture of gestures.values())gesture.snapshot=null; active = false;  overlay.stop(); overlayCanvas.dataset.detected = 'false'; detectionStatus.textContent = 'カード検出なし';
+  closeCandidateDetail();scanGeneration++; evidenceRevision++; hideSuggestion(); tentative.newContext();for(const gesture of gestures.values())gesture.snapshot=null; active = false;  overlay.stop(); overlayCanvas.dataset.detected = 'false'; detectionStatus.textContent = 'カード検出なし';
   if (loopTimer) clearTimeout(loopTimer); loopTimer = null;
   stream?.getTracks().forEach(track => track.stop()); stream = null; video.srcObject = null;
   scanLabel.textContent = 'スキャン開始'; guide.hidden = true;
@@ -374,7 +432,7 @@ async function loop(generation: number): Promise<void> {
     if (generation !== scanGeneration || !active || revision!==evidenceRevision) return;
     diagnostics.textContent=`類似度 ${Number.isFinite(candidate.score) ? candidate.score!.toFixed(3) : '—'} · margin ${Number.isFinite(candidate.margin) ? candidate.margin.toFixed(3) : '—'}`;
     overlay.update(candidate, capturedAt);
-    cameraStatus.textContent = 'カード全体を画面内へ · 候補は「これです」で確認してください';
+    cameraStatus.textContent = 'カード全体を画面内へ · 情報を表示します。保存は任意です';
     presentSuggestion(tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now()));
   } catch (error) {
     if (generation === scanGeneration) { modelReady = false; modelRetry.hidden = false; stopCamera(errorText(error, '認識できません。名前検索も利用できます。')); }
@@ -405,7 +463,7 @@ async function scanFile(image: File): Promise<void> {
     diagnostics.textContent=`類似度 ${Number.isFinite(candidate.score)?candidate.score!.toFixed(3):'—'} · margin ${Number.isFinite(candidate.margin)?candidate.margin.toFixed(3):'—'}`;
     const proposal = tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now());
     presentSuggestion(proposal);
-    cameraStatus.textContent = proposal ? '画像の処理が完了しました。候補が表示されたら「これです」で確認してください。' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
+    cameraStatus.textContent = proposal ? '画像の処理が完了しました。情報を確認できます。保存は任意です。' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
   } catch (error) { if (generation === scanGeneration) cameraStatus.textContent = errorText(error, '画像を認識できません。'); }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera('背景に移動したため停止しました。スキャン開始から再開できます。'); });

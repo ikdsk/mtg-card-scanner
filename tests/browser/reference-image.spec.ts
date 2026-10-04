@@ -24,45 +24,45 @@ test.beforeEach(async ({ page }) => {
 });
 test('selected physical printing image ignores Japanese text fallback and follows language/edition', async ({ page }) => {
   await open(page);
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('en').normal);
-  await expect(page.locator('.reference-image img')).toBeVisible();
-  await expect(page.locator('.reference-image')).toContainText('参照画像');
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('en').normal);
+  await expect(page.locator('.result .reference-image img')).toBeVisible();
+  await expect(page.locator('.result .reference-image')).toContainText('参照画像');
   await expect(page.locator('.reference-image a')).toHaveAttribute('href', base.scryfall_uri);
-  await expect(page.locator('.reference-image img')).toHaveAttribute('alt', /Synthetic Bolt/);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('alt', /Synthetic Bolt/);
   await openRoute(page,'確定カード'); await page.getByLabel('選択版の言語').selectOption('ja');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('ja').normal);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('ja').normal);
   await openRoute(page,'確定カード'); await page.getByLabel('選択版の言語').selectOption('en');
   await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('front').normal);
 });
 test('DFC face remains selected through prices/FX and resets on identity change; missing/error stay usable', async ({ page }) => {
   await open(page); await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
   const back = page.getByRole('button', { name: '裏面：Synthetic Back', exact: true }); await back.click();
   await expect(back).toHaveAttribute('aria-pressed', 'true');
   await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).selectOption('foil');
-  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('back').normal);
+  await expect(page.locator('.result .usd')).toHaveText('$2.00 USD');
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('back').normal);
   await page.getByRole('button', { name: '価格・為替を再確認', exact: true }).click();
   await expect(page.locator('.yen')).toHaveText('概算 ￥300');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('back').normal);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('back').normal);
   await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-none');
-  await expect(page.locator('.reference-image')).toContainText('この面の参照画像はありません');
-  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
+  await expect(page.locator('.result .reference-image')).toContainText('この面の参照画像はありません');
+  await expect(page.locator('.result .usd')).toHaveText('$2.00 USD');
   await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-error');
-  await expect(page.locator('.reference-image')).toContainText('参照画像を読み込めません');
-  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
+  await expect(page.locator('.result .reference-image')).toContainText('参照画像を読み込めません');
+  await expect(page.locator('.result .usd')).toHaveText('$2.00 USD');
   await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('front').normal);
   await expect(page.getByRole('button', { name: '表面：Synthetic Front', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 test('delayed image never gates prices or shifts reserved layout/focus/scroll; stale events cannot restore image', async ({ page }, info) => {
   let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://cards.scryfall.io/**', async route => { await wait; await route.fulfill({ contentType: 'image/svg+xml', body: svg }); });
-  await open(page); await expect(page.locator('.usd')).toHaveText('$1.00 USD');
+  await open(page); await expect(page.locator('.result .usd')).toHaveText('$1.00 USD');
   await expect(page.locator('.yen')).toHaveText('概算 ￥150');
   const before = await page.locator('.reference-region').boundingBox();
   await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).focus(); await page.evaluate(() => scrollTo(0, 0));
-  release(); await expect(page.locator('.reference-image img')).toBeVisible();
+  release(); await expect(page.locator('.result .reference-image img')).toBeVisible();
   expect(await page.evaluate(() => scrollY)).toBe(0); await expect(page.getByLabel('加工', { exact: true })).toBeFocused();
   const after = await page.locator('.reference-region').boundingBox();
   expect(after?.width).toBe(before?.width); expect(after?.height).toBe(before?.height);
@@ -71,8 +71,8 @@ test('delayed image never gates prices or shifts reserved layout/focus/scroll; s
   await page.evaluate(() => { (window as unknown as { oldImage: Element | null }).oldImage = document.querySelector('.reference-image img'); });
   await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
   await page.evaluate(() => { const old = (window as unknown as { oldImage: Element }).oldImage; old.dispatchEvent(new Event('load')); old.dispatchEvent(new Event('error')); });
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
-  await expect(page.locator('.reference-image img')).toBeVisible();
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('front').normal);
+  await expect(page.locator('.result .reference-image img')).toBeVisible();
   if (info.project.name === 'mobile-viewport') {
     await page.locator('.result').scrollIntoViewIfNeeded();
     await page.evaluate(() => document.querySelector('.result')!.scrollIntoView({ block: 'start' }));
@@ -98,18 +98,18 @@ test('reversed card responses and next scan cannot restore an old reference (SYN
   await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Synthetic Front.*TST/ }).click();
   await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(4);
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
-  release(); await expect(page.locator('.usd')).toHaveText('$1.00 USD');
-  await expect(page.locator('.reference-image img')).toHaveAttribute('src', image('front').normal);
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('front').normal);
+  release(); await expect(page.locator('.result .usd')).toHaveText('$1.00 USD');
+  await expect(page.locator('.result .reference-image img')).toHaveAttribute('src', image('front').normal);
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: async () => { throw new DOMException('SYNTHETIC denial', 'NotAllowedError'); } } });
     (window as unknown as { obsolete: Element | null }).obsolete = document.querySelector('.reference-image img');
   });
   await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
   await page.getByRole('button', { name: '次のカードをスキャン', exact: true }).click();
-  await expect(page.locator('.result')).toBeHidden(); await expect(page.locator('.reference-image img')).toHaveCount(0);
+  await expect(page.locator('.result')).toBeHidden(); await expect(page.locator('.result .reference-image img')).toHaveCount(0);
   await page.evaluate(() => { const old = (window as unknown as { obsolete: Element }).obsolete; old.dispatchEvent(new Event('load')); old.dispatchEvent(new Event('error')); });
-  await expect(page.locator('.reference-image img')).toHaveCount(0);
+  await expect(page.locator('.result .reference-image img')).toHaveCount(0);
 });
 test('recognized result shows reference before a delayed image finishes (SYNTHETIC worker/frame)', async ({ page }) => {
   await page.addInitScript(() => {
@@ -128,20 +128,20 @@ test('recognized result shows reference before a delayed image finishes (SYNTHET
   await page.goto('/');
   const bytes = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = canvas.height = 2; return canvas.toDataURL().split(',')[1]!; });
   await page.locator('#local-image').setInputFiles({ name: 'SYNTHETIC-frame.png', mimeType: 'image/png', buffer: Buffer.from(bytes, 'base64') });
-  await expect(page.locator('.tentative')).toContainText('Synthetic Bolt');await expect(page.locator('.result')).toBeHidden();await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();
+  await expect(page.locator('.tentative')).toContainText('Synthetic Bolt');await expect(page.locator('.result')).toBeHidden();await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
   await openRoute(page,'確定カード');
   await expect(page.locator('.result h2')).toBeInViewport();
-  await expect(page.locator('.reference-image')).toContainText('参照画像を読み込み中');
-  await expect(page.locator('.usd')).toHaveText('$1.00 USD');
-  release(); await expect(page.locator('.reference-image img')).toBeVisible();
+  await expect(page.locator('.result .reference-image')).toContainText('参照画像を読み込み中');
+  await expect(page.locator('.result .usd')).toHaveText('$1.00 USD');
+  release(); await expect(page.locator('.result .reference-image img')).toBeVisible();
 });
 test('late FX update keeps back face, image DOM, focus and scroll (SYNTHETIC)', async ({ page }) => {
   let release!: () => void; const pending = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://api.frankfurter.dev/**', async route => { await pending; await route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }); });
   await open(page); await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('image-dfc');
   await page.getByRole('button', { name: '裏面：Synthetic Back', exact: true }).click();
-  await expect(page.locator('.usd')).toHaveText('$1.00 USD');
-  await expect(page.locator('.reference-image img')).toBeVisible();
+  await expect(page.locator('.result .usd')).toHaveText('$1.00 USD');
+  await expect(page.locator('.result .reference-image img')).toBeVisible();
   await page.evaluate(() => { (window as unknown as { retained: Element | null }).retained = document.querySelector('.reference-image img'); scrollTo(0, 0); });
   release(); await expect(page.locator('.yen')).toHaveText('概算 ￥150');
   await expect(page.getByRole('button', { name: '裏面：Synthetic Back', exact: true })).toBeFocused();

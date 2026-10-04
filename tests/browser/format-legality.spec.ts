@@ -149,7 +149,7 @@ for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
     await expect(page.locator('.tentative .format-legality')).toHaveCount(1);
     await expect(badges).toHaveCount(7);
     for (const badge of await badges.all()) await expect(badge).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole('button', { name: 'これです', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('button', { name: '履歴に保存', exact: true })).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-summary strong').first()).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-set')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-summary img').first()).toBeInViewport({ ratio: 1 });
@@ -174,10 +174,10 @@ for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
     await expect(badges.nth(4)).toBeFocused();
     await expect(badges.nth(4)).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('#candidate-format-disclosure')).toContainText('1枚まで');
-    await expect(page.getByRole('button', { name: 'これです', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('button', { name: '履歴に保存', exact: true })).toBeInViewport({ ratio: 1 });
     await page.keyboard.press('Space');
     await expect(page.locator('#candidate-format-disclosure')).toBeHidden();
-    await page.getByRole('button', { name: '候補パネルを拡大', exact: true }).click();
+    await page.getByRole('button', { name: '詳細を見る', exact: true }).click();
     if (dfc) {
       const faces = page.locator('.candidate-summary .reference-image button');
       await expect(page.locator('.candidate-summary>div>p').first()).toHaveText(`英語：${front} // ${back}`);
@@ -197,6 +197,6 @@ for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
     await expect(page.locator('#candidate-format-disclosure')).toContainText('1枚まで');
     expect(await page.locator('.candidate-details').evaluate(node => node.scrollTop)).toBe(scroll);
     await page.screenshot({ path: testInfo.outputPath(`synthetic-candidate-format-${width}.png`), fullPage: true });
-    await page.getByRole('button', { name: '停止', exact: true }).click();
+    await closeRoute(page);await page.getByRole('button', { name: '停止', exact: true }).click();
   });
 }

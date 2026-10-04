@@ -22,7 +22,7 @@ for(const language of ['en','ja'] as const)test(`DFC Japanese face names use usa
  await expect(page.locator('.tentative img')).toHaveAttribute('src',physical.card_faces[0]!.image_uris.normal);
  await expect(page.locator('.tentative')).toContainText(`${physical.set.toUpperCase()}) #${physical.collector_number} · ${physical.lang}`);
  if(physical.prices.usd)await expect(page.locator('.tentative .usd')).toHaveText(`$${physical.prices.usd} USD`);else await expect(page.locator('.tentative')).toContainText('この版・言語・加工の価格なし');
- await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード');
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await openRoute(page,'確定カード');
  await expect(page.locator('.result h2')).toHaveText('秘密を掘り下げる者 // 昆虫の逸脱者');
  await expect(page.locator('.scan-history-row')).toContainText('秘密を掘り下げる者 // 昆虫の逸脱者');
  await expect(page.locator('.result img')).toHaveAttribute('src',physical.card_faces[0]!.image_uris.normal);
@@ -31,26 +31,26 @@ for(const language of ['en','ja'] as const)test(`DFC Japanese face names use usa
 test('recognized back initializes image; manual switch survives same-face observations and price; new face replaces version',async({page})=>{
  await install(page);await page.goto('/');await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await closeRoute(page);await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
  const image=page.locator('.tentative img');await expect(image).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
- await page.getByRole('button',{name:'候補パネルを拡大',exact:true}).click();
+ await page.getByRole('button',{name:'詳細を見る',exact:true}).click();
  await page.locator('.tentative').getByRole('button',{name:/^表面：/}).click();await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await page.waitForTimeout(800);await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=0;});await page.waitForTimeout(400);
- await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await expect(image).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
- await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード');
+ await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await page.waitForTimeout(400);await expect(image).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);await closeRoute(page);await expect(image).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await openRoute(page,'確定カード');
  await expect(page.locator('.result img')).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
  await page.locator('.result').getByRole('button',{name:/^表面：/}).click();await page.getByLabel('加工',{exact:true}).selectOption('foil');
  await expect(page.locator('.result img')).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
 });
 test('held Space cannot confirm replaced face of same physical DFC',async({page})=>{
  await install(page);await start(page);await expect(page.locator('.tentative strong').first()).toContainText('秘密を掘り下げる者');
- const confirm=page.getByRole('button',{name:'これです',exact:true});await confirm.focus();await page.keyboard.down('Space');
+ const confirm=page.getByRole('button',{name:'履歴に保存',exact:true});await confirm.focus();await page.keyboard.down('Space');
  await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await expect(page.locator('.tentative img')).toHaveAttribute('src',en.card_faces[1]!.image_uris.normal);
  await page.keyboard.down('Space');await page.keyboard.up('Space');await expect(page.locator('.scan-history-row')).toHaveCount(0);
  await page.keyboard.press('Space');await expect(page.locator('.scan-history-row')).toHaveCount(1);
 });
 test('held Enter cannot add confirmation after accepted DFC changes face',async({page})=>{
  await install(page);await start(page);await expect(page.locator('.tentative strong').first()).toContainText('秘密を掘り下げる者');
- await page.getByRole('button',{name:'これです',exact:true}).focus();await page.keyboard.down('Enter');await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).focus();await page.keyboard.down('Enter');await expect(page.locator('.scan-history-row')).toHaveCount(1);
  await page.evaluate(()=>{(window as any).dfcProbe.faceIndex=1;});await page.waitForTimeout(500);
  await page.keyboard.down('Enter');await page.keyboard.up('Enter');await expect(page.locator('.scan-history-row')).toHaveCount(1);
  await expect(page.locator('.result img')).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
@@ -59,7 +59,7 @@ for(const failure of ['rejected','name-is-id','oracle-is-name','blank'] as const
  await install(page);
  await page.route(`https://api.scryfall.com/cards/${en.id}`,r=>r.fulfill(failure==='rejected'?{status:503,json:{}}:{json:{...en,name:failure==='name-is-id'?en.id:failure==='oracle-is-name'?en.oracle_id:'  '}}));
  await start(page);await expect(page.locator('.empty-candidate')).toContainText(failure==='rejected'?'取得できません':'確認できません');
- await expect(page.locator('.tentative')).toBeHidden();await expect(page.getByRole('button',{name:'これです',exact:true})).toBeHidden();
+ await expect(page.locator('.tentative')).toBeHidden();await expect(page.getByRole('button',{name:'履歴に保存',exact:true})).toBeHidden();
  await expect(page.locator('body')).not.toContainText(en.id);await expect(page.locator('body')).not.toContainText(en.oracle_id);await expect(page.locator('.scan-history-row')).toHaveCount(0);
 });
 test('DFC missing Japanese names is explicit and English is never labeled Japanese',async({page})=>{
@@ -72,6 +72,6 @@ test('dismissed DFC cannot resurrect from deferred Japanese metadata',async({pag
  await install(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);
  await page.route('https://api.scryfall.com/cards/search?**',async r=>{await pending;await r.fulfill({json:{data:[en,...ja],has_more:false}}).catch(()=>{});});
  await start(page);await expect(page.locator('.tentative img')).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
- await page.getByRole('button',{name:'違う',exact:true}).click();release();await page.waitForTimeout(700);
+ await page.getByRole('button',{name:'別のカードを探す',exact:true}).click();release();await page.waitForTimeout(700);
  await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
 });

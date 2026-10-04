@@ -26,7 +26,7 @@ for(const width of [320,390])test(`compact physical set icon and readable label 
  await expect(page.getByRole('group',{name:'実物の拡張：Limited Edition Alpha (LEA)',exact:true})).toBeVisible();
  await expect(badge.locator('img')).toBeVisible();await expect.poll(()=>badge.locator('img').evaluate(n=>(n as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);await expect(badge).toBeInViewport();
  expect(await badge.evaluate(n=>{const r=n.getBoundingClientRect(),p=n.closest('.candidate-summary')!.getBoundingClientRect();return r.top>=p.top&&r.bottom<=p.bottom&&n.scrollWidth<=n.clientWidth;})).toBe(true);
- await expect(page.locator('.candidate-details')).toBeHidden();await expect(page.getByRole('button',{name:'これです',exact:true})).toBeEnabled();
+ await expect(page.locator('.candidate-details')).toBeHidden();await expect(page.getByRole('button',{name:'履歴に保存',exact:true})).toBeEnabled();
  await page.screenshot({path:info.outputPath(`compact-${width}.png`)});
  await page.evaluate(()=>{(window as any).badgeCard='badge-b';});await expect(page.locator('.tentative')).toContainText('Physical Beta');
  await page.evaluate(()=>{(window as any).badgeCard='badge-a';});await expect(badge).toHaveText('Limited Edition Alpha (LEA)');
@@ -36,7 +36,7 @@ test('late A metadata cannot populate B or a cleared candidate (SYNTHETIC)',asyn
  let release!:()=>Promise<void>;const pending=new Promise<void>(resolve=>{void page.route('https://api.scryfall.com/sets/lea',r=>{release=async()=>{await r.fulfill({json:{object:'set',code:'lea',icon_svg_uri:'https://svgs.scryfall.io/sets/lea.svg'}});resolve();};});});
  await page.route('https://api.scryfall.com/sets/leb',r=>r.fulfill({json:{object:'set',code:'leb',icon_svg_uri:'https://svgs.scryfall.io/sets/leb.svg'}}));
  await setup(page);await expect.poll(()=>typeof release).toBe('function');
- await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);
  await page.evaluate(()=>{(window as any).badgeCard='badge-b';});
  const badge=page.locator('.candidate-set');await expect(badge).toHaveText('Limited Edition Beta (LEB)');await expect(badge.locator('img')).toHaveAttribute('src','https://svgs.scryfall.io/sets/leb.svg');
  await release();await pending;
@@ -49,6 +49,6 @@ for(const failure of ['missing','network','image','unsafe'] as const)test(`${fai
  await page.route('https://api.scryfall.com/sets/*',r=>failure==='network'?r.abort('failed'):r.fulfill({json:{object:'set',code:'lea',...(failure==='missing'?{}:{icon_svg_uri:failure==='unsafe'?'https://evil.test/set.svg':'https://svgs.scryfall.io/sets/lea.svg'})}}));
  const imageRequests=await setup(page,failure==='image');if(failure==='image')await expect.poll(imageRequests).toBeGreaterThan(0);const badge=page.locator('.candidate-set');await expect(badge).toHaveText('Limited Edition Alpha (LEA)');
  await expect(badge.locator('img')).toHaveCount(0);await expect(badge).toBeInViewport();
- await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);
  await page.screenshot({path:info.outputPath(`${failure}-fallback.png`)});await page.getByRole('button',{name:'停止',exact:true}).click();
 });

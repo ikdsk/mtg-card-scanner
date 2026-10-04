@@ -9,7 +9,7 @@ async function scan(page: Page, id: string, confirm = true) {
   await page.evaluate(id => { (window as unknown as { syntheticId: string }).syntheticId = id; }, id);
   const image = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 2; return c.toDataURL().split(',')[1]!; });
   await page.locator('#local-image').setInputFiles({ name: 'SYNTHETIC.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') });
-  if(confirm){await expect(page.locator('.tentative')).toBeVisible();await expect(page.locator('.tentative')).toContainText(id === 'history-b' ? '英語：Synthetic Beta' : '英語：Synthetic Alpha');await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();}
+  if(confirm){await expect(page.locator('.tentative')).toBeVisible();await expect(page.locator('.tentative')).toContainText(id === 'history-b' ? '英語：Synthetic Beta' : '英語：Synthetic Alpha');if(id===a.id)await expect(page.locator('.tentative')).toContainText('日本語：合成アルファ');await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();}
 }
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -36,7 +36,7 @@ test.beforeEach(async ({ page }) => {
 test('session history preserves scans, updates the original selection and reopens without a new event', async ({ page }, info) => {
   await page.goto('/'); await expect(page.locator('.scan-history')).toBeHidden();
   await scan(page, a.id); await expect(page.locator('.scan-history-row')).toHaveCount(1);
-  await expect(page.locator('.price')).toHaveText('この版・言語・加工の価格なし');
+  await expect(page.locator('.result .price')).toHaveText('この版・言語・加工の価格なし');
   await expect(page.getByLabel('選択版の言語').locator('option')).toHaveCount(2);
   await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).selectOption('foil');
   await openRoute(page,'確定カード'); await page.getByLabel('選択版の言語').selectOption('ja');
@@ -48,7 +48,7 @@ test('session history preserves scans, updates the original selection and reopen
   await expect(page.locator('.result')).toBeHidden(); await expect(page.locator('.scan-history-row')).toHaveCount(1);
   await scan(page, b.id); await expect(page.locator('.scan-history-row')).toHaveCount(2);
   await scan(page, a.id); await expect(page.locator('.scan-history-row')).toHaveCount(3);
-  await expect(page.locator('.scan-history-row').nth(0)).toContainText('Synthetic Alpha');
+  await expect(page.locator('.scan-history-row').nth(0)).toContainText('合成アルファ');
   await expect(page.locator('.scan-history-row').nth(1)).toContainText('Synthetic Beta');
   await expect(page.locator('.scan-history-row').nth(2)).toContainText('合成アルファ');
   const old = page.locator('.scan-history-row').nth(2); await openRoute(page,'履歴'); await old.click();
@@ -121,7 +121,7 @@ test('history remains reachable while camera runs; reopening stops it and never 
   await expect(page.locator('.scan-history-row')).toHaveCount(1);
   await page.evaluate(() => { (window as unknown as { syntheticId: string }).syntheticId = 'history-b'; });
   await closeRoute(page); await page.getByRole('button', { name: 'スキャン開始', exact: true }).click();
-  await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();
+  await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
   await expect(page.locator('.scan-history-row')).toHaveCount(2);
   await expect(page.locator('.scan-history-row').first()).toContainText('Synthetic Beta');
   // Live acceptance preserves the camera and does not reveal/scroll the result.

@@ -149,7 +149,7 @@ test('recognized candidate requires confirmation; result and return action can b
   await page.goto('/');
   const image = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 2; return c.toDataURL().split(',')[1]!; });
   await page.locator('#local-image').setInputFiles({ name: 'SYNTHETIC.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') });
-  await expect(page.locator('.tentative')).toContainText('Lightning Bolt');await expect(page.locator('.result')).toBeHidden();await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();
+  await expect(page.locator('.tentative')).toContainText('Lightning Bolt');await expect(page.locator('.result')).toBeHidden();await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
   await openRoute(page,'確定カード');
   await expect(page.locator('.result h2')).toBeInViewport();
   await expect(page.getByRole('button', { name: 'スキャンに戻る', exact: true })).toBeInViewport();
