@@ -12,20 +12,61 @@
 
 /* Camera-first stable letterbox; complete delivered frame remains contained. */
 .detection-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.tentative {display:flex;align-items:center;gap:.6rem;padding:.65rem;border:1px solid var(--border,#455);border-radius:12px;margin:.5rem 0;min-width:0}
-.tentative[hidden] {display:none}
-.tentative img {width:42px;height:59px;object-fit:contain;flex:none}
-.tentative > div {min-width:0}
-.tentative strong,.tentative span {display:block;overflow-wrap:anywhere}
-.tentative .actions {flex-wrap:wrap;flex:none}
-.tentative p {margin:.15rem 0}
-.recognition-settings {margin:.5rem 0;padding:.6rem}
-.recognition-settings label {display:block;margin:.5rem 0}
-.recognition-settings input {width:100%;max-width:12rem}
-.sr-only {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-@media(max-width:400px){.tentative {flex-wrap:wrap}.tentative > div:not(.actions){flex:1}.tentative .actions{width:100%}}
-.camera-info > p:last-child {margin:0;font-size:.72rem;line-height:1.2}
 
-.tentative {grid-column:1/-1;margin:0;background:var(--panel);color:var(--ink)}
-.recognition-settings {background:var(--panel);color:var(--ink);border-radius:12px;margin:0 20px 16px;padding:12px 16px}
-@media(max-width:650px){.recognition-settings{margin-inline:16px}}
+.recognition-settings{background:var(--panel);color:var(--ink);border-radius:12px;padding:12px 16px}
+.recognition-settings label{display:block;margin:.5rem 0}.recognition-settings input{width:100%;max-width:12rem}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+/* Immersive visual viewport: camera and candidate dock are adjacent flex rows. */
+html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+#app{position:fixed;inset:0 auto auto 0;max-width:none;margin:0;display:flex;flex-direction:column;height:100dvh;min-width:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
+.scan-panel{flex:1 1 0;min-height:0;position:relative}
+.viewport{height:100%;min-height:0;max-height:none;width:100%}
+.viewport header{position:absolute;inset:0 0 auto;z-index:2;padding:8px 12px;background:linear-gradient(#101114c0,transparent);pointer-events:none}
+.viewport header button{pointer-events:auto;min-height:36px;padding:6px 10px;background:#191b20cc}
+.viewport h1{font-size:1rem}.action-panel{position:absolute;top:54px;left:12px;right:12px;padding:0;z-index:2}
+.action-panel>.actions{display:flex;gap:8px}.action-panel button{padding:7px 10px;min-height:40px;font-size:.8rem}.camera-info{position:absolute;bottom:0;left:0;right:0;padding:5px 12px;background:#101114c9;pointer-events:none}
+.camera-info p{margin:0;font-size:.65rem;line-height:1.25}.camera-info .camera-status{font-size:.72rem}.guide{display:none}
+.candidate-dock{--dock-height:calc(190px + 6.5rem);flex:0 0 min(var(--dock-height),80%);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);min-width:0;min-height:0;border-radius:16px 16px 0 0}
+.candidate-dock[data-expanded=true]{--dock-height:60%;flex-basis:var(--dock-height)}
+.dock-toolbar{display:flex;align-items:center;gap:6px;padding:5px 12px;flex:none}.dock-toolbar>span{flex:1;min-width:0}.dock-toolbar button{min-width:44px;min-height:36px;padding:2px 10px;font-size:1.3rem;line-height:1.1}.dock-toolbar button:disabled{cursor:default}
+.panel-navigation{display:flex;gap:5px;padding:6px 10px;flex:none;border-top:1px solid var(--line)}.panel-navigation button{flex:1;min-width:0;padding:7px 2px;min-height:36px;font-size:.72rem;overflow-wrap:anywhere}.panel-navigation button[aria-expanded=true]{background:#24262c;color:white}
+.empty-candidate{flex:1;margin:0;padding:14px;overflow:auto}
+.candidate-dock .tentative{flex:1;min-height:0;border:0;border-radius:0;padding:0 12px;display:flex;flex-direction:column;gap:5px;overflow:hidden;min-width:0}
+.candidate-summary{display:grid;grid-template-columns:60px minmax(0,1fr);gap:10px;min-height:0;overflow:auto;overscroll-behavior:contain;flex:1;align-items:start}
+.candidate-summary .reference-image{grid-column:1;grid-row:1}.candidate-summary>div{grid-column:2;grid-row:1;min-width:0}
+.candidate-summary .reference-image figcaption,.candidate-summary .reference-image>.small{display:none}.candidate-summary .reference-image .actions{gap:3px;margin:2px 0}.candidate-summary .reference-image .actions button{min-height:26px;padding:2px;font-size:.6rem}
+.candidate-dock .tentative p{margin:2px 0}.candidate-summary strong,.candidate-summary span{display:block;overflow-wrap:anywhere}.candidate-summary p{overflow-wrap:anywhere}
+.candidate-summary strong{font-size:.95rem;line-height:1.3}.candidate-summary p{line-height:1.3}.candidate-summary .candidate-price{min-height:0;margin:2px 0;padding:0;border:0;width:auto}.candidate-summary .candidate-price .eyebrow{font-size:.62rem}.candidate-summary .candidate-price .price{font-size:1.1rem}.candidate-summary .candidate-price .usd{font-size:.75rem}.candidate-summary .small{font-size:.68rem}
+.candidate-dock .tentative>.actions{flex:none;display:flex;margin:0;padding:4px 0;gap:8px}.candidate-dock .tentative>.actions button{flex:1;min-width:0;min-height:42px;padding:7px}.candidate-dock .tentative>.actions button:first-child{background:#24262c;color:#fff}
+.candidate-details{flex:1;overflow:auto;min-height:0;width:100%;overscroll-behavior:contain;overflow-anchor:none;border-top:1px solid var(--line);padding:8px 0;overflow-wrap:anywhere}
+ .candidate-dock[data-expanded=true] .candidate-summary{flex:0 0 auto;max-height:calc(100% - 60px);min-height:0}
+ .candidate-dock[data-expanded=true] .candidate-details .format-legality{width:100%}.candidate-details .face{margin:8px 0;padding:6px 10px}.candidate-details h3{margin:10px 0 5px}
+/* Top-layer modal stays independent of the camera/dock flex geometry. */
+.utility-drawer{position:fixed;inset:auto;top:calc(var(--window-top,0px) + env(safe-area-inset-top) + 8px);left:calc(var(--window-left,0px) + var(--window-width,100vw)/2);transform:translateX(-50%);width:calc(var(--window-width,100vw) - env(safe-area-inset-left) - env(safe-area-inset-right) - 16px);height:calc(var(--window-height,100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px);max-height:none;max-width:800px;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:0;min-height:0;box-shadow:0 8px 32px #0008;color:var(--ink);overflow:hidden}
+.utility-drawer[open]{display:flex;flex-direction:column}
+.utility-drawer:not([open]){display:none}
+.utility-drawer::backdrop{background:#0009}
+.viewport h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.viewport header{justify-content:flex-end}
+
+.drawer-bar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);flex:none}.drawer-bar h2{font-size:1.05rem;flex:1;min-width:0;margin:0}.drawer-bar button{font-size:.75rem;padding:7px;min-height:36px}
+.drawer-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;overflow-anchor:none;padding:12px;min-width:0}.drawer-route:not(.route-active){display:none!important}
+.drawer-body .panel,.drawer-body .information,.drawer-body .recognition-settings{margin:0;padding:10px;min-width:0;border-radius:0}.drawer-body .information{color:var(--ink)}.drawer-body .information a{color:#444f74}.drawer-body .file-button{color:var(--ink);margin-top:12px}.drawer-body .file-button input{min-width:0;flex-basis:100%}.drawer-body .result::before{display:none}.drawer-body .scan-history{margin:0}.drawer-body .result-heading{grid-template-columns:80px minmax(0,1fr)}
+@media(min-width:700px){.candidate-summary{grid-template-columns:80px minmax(0,1fr);max-width:850px;width:100%;margin:auto}.candidate-dock .tentative>.actions,.candidate-details{max-width:850px;align-self:center}.panel-navigation{justify-content:center}.panel-navigation button{max-width:180px}.dock-toolbar{padding-inline:max(12px,calc((100% - 850px)/2))}}
+#app.compact-viewport .candidate-dock[data-expanded=true]{--dock-height:72%}#app.compact-viewport .camera-info p:not(.camera-status){display:none}#app.compact-viewport .viewport header{padding:4px 8px}#app.compact-viewport .viewport h1{font-size:.85rem}#app.compact-viewport .action-panel{top:54px;left:8px}#app.compact-viewport .action-panel button{min-height:34px;padding:5px}#app.compact-viewport .dock-toolbar{padding-block:2px}#app.compact-viewport .panel-navigation{padding-block:3px}
+/* The compact summary has one currency row; provenance belongs to expanded detail. */
+.candidate-summary>div>.eyebrow{display:none}
+.candidate-summary .candidate-price>.eyebrow{display:none}
+.candidate-summary .candidate-price .price,.candidate-summary .candidate-price .usd{display:inline-block;margin-right:6px;vertical-align:baseline}
+ .candidate-summary>.candidate-price{grid-column:1/-1;grid-row:2;align-self:start;margin:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.candidate-summary{align-content:start;row-gap:4px}
+#app.short-viewport .candidate-summary{grid-template-columns:42px minmax(0,1fr)}#app.short-viewport .candidate-summary .reference-image{max-width:42px}#app.short-viewport .candidate-summary .reference-image .actions{display:flex;flex-wrap:wrap}#app.short-viewport .candidate-summary .reference-image .actions button{font-size:.5rem}
+.candidate-summary .reference-image .actions:empty{display:none}
+/* At keyboard/landscape heights, put camera actions in the header's single row. */
+#app.short-viewport .viewport h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}#app.short-viewport .action-panel{top:4px;right:100px}#app.short-viewport .action-panel>.actions{flex-wrap:nowrap}#app.short-viewport .action-panel button{min-height:36px;padding:5px;font-size:.7rem}
+.candidate-dock .tentative>.actions{width:100%}
+#app.short-viewport .viewport header{justify-content:flex-end}
+#app .candidate-summary .reference-image .actions:empty{display:none}
+/* Expansion always increases the panel, including keyboard/landscape viewports. */
+#app.short-viewport .candidate-dock{flex-basis:min(var(--dock-height),73%)}
+#app.short-viewport .candidate-dock[data-expanded=true]{--dock-height:82%;flex-basis:var(--dock-height)}

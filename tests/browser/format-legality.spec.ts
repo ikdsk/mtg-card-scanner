@@ -1,3 +1,4 @@
+import { openRoute, closeRoute } from './immersive-routes.js';
 import { test, expect } from '@playwright/test';
 // All provider responses are SYNTHETIC. No live card/recognition evidence.
 const card = { id: 'format-first', oracle_id: 'format-oracle', name: 'Synthetic Formats', lang: 'en', set: 'tst', set_name: 'Synthetic Set', collector_number: '1', finishes: ['nonfoil'], prices: { usd: '0.00' }, legalities: { standard: 'legal', pioneer: 'banned', modern: 'not_legal', vintage: 'restricted', commander: 'unrecognized' } };
@@ -10,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://api.frankfurter.dev/**', route => route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }));
 });
 async function open(page: import('@playwright/test').Page) {
-  await page.goto('/'); await page.getByRole('searchbox').fill('Synthetic'); await page.getByRole('button', { name: '検索', exact: true }).click();
+  await page.goto('/'); await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('Synthetic'); await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Synthetic Formats.*#1/ }).click();
 }
 test('icon order, all statuses, tap/keyboard disclosure and fresh card reset', async ({ page }, info) => {
@@ -30,12 +31,12 @@ test('icon order, all statuses, tap/keyboard disclosure and fresh card reset', a
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
-  await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
+  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
   await expect(icons.nth(0)).toHaveAttribute('data-status', 'unknown');
   await expect(icons.nth(2)).toHaveAttribute('data-status', 'legal');
   await expect(page.locator('.format-disclosure')).toBeHidden();
-  await page.getByLabel('印刷版', { exact: true }).selectOption(card.id);
-  await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
+  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(card.id);
+  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
   await expect(icons.nth(0)).toHaveAttribute('data-status', 'unknown');
 });
 test('JPY is primary with approximation, USD secondary and zero retained', async ({ page }) => {
@@ -58,7 +59,7 @@ test('late FX preserves badge disclosure, focused control, input and scroll', as
   await expect(badge).toBeFocused(); await expect(badge).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('.format-disclosure')).toContainText('1枚まで');
   expect(await page.evaluate(() => scrollY)).toBe(0);
-  await expect(page.getByRole('searchbox')).toHaveValue('Synthetic');
+  await expect(page.locator('.search-form input')).toHaveValue('Synthetic');
 });
 test('null reference price has no fabricated USD or JPY', async ({ page }) => {
   await page.route('https://api.scryfall.com/cards/format-first', route => route.fulfill({ json: { ...card, prices: { usd: null } } }));

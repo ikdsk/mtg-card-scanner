@@ -1,3 +1,4 @@
+import { openRoute, closeRoute } from './immersive-routes.js';
 import { test, expect, type Page } from '@playwright/test';
 // SYNTHETIC canvas camera, worker results and provider metadata. Not model accuracy evidence.
 const a={id:'continuous-a',oracle_id:'oracle-a',name:'Synthetic Alpha',lang:'en',set:'tst',set_name:'Synthetic',collector_number:'1',finishes:['nonfoil','foil'],prices:{usd:'1',usd_foil:'2'},legalities:{},image_uris:{small:'https://cards.scryfall.io/small/synthetic.jpg',normal:'https://cards.scryfall.io/small/synthetic.jpg'}};
@@ -19,8 +20,8 @@ async function installSyntheticFlow(page: Page) {
 }
 test('one observation proposal, dismiss, rearm, keyboard confirm, camera stays live (SYNTHETIC)',async({page},info)=>{
  await installSyntheticFlow(page);await page.goto('/');await page.screenshot({path:info.outputPath('initial.png')});
- await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.screenshot({path:info.outputPath('debugopen.png'),fullPage:true});await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.evaluate(()=>scrollTo(0,0));
- await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.screenshot({path:info.outputPath('debugopen.png'),fullPage:true});await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.evaluate(()=>scrollTo(0,0));
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
  await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect(page.locator('.tentative')).toContainText('類似度 0.623');
  await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();expect(await page.evaluate(()=>scrollY)).toBe(0);
  await page.screenshot({path:info.outputPath('tentative.png')});
@@ -28,102 +29,98 @@ test('one observation proposal, dismiss, rearm, keyboard confirm, camera stays l
  await page.evaluate(()=>{(window as any).continuousProbe.present=false;});await page.waitForTimeout(1000);await page.evaluate(()=>{(window as any).continuousProbe.present=true;});
  await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'これです',exact:true}).focus();await page.keyboard.press('Enter');
  await expect(page.locator('.result h2')).toHaveText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.locator('.tentative')).toBeHidden();await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
- await page.screenshot({path:info.outputPath('confirmed.png')});await page.getByRole('button',{name:'停止',exact:true}).click();
+ await page.screenshot({path:info.outputPath('confirmed.png')});await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('pointer identity and dismissed delayed metadata cannot select another card (SYNTHETIC)',async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
+ await installSyntheticFlow(page);await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  const confirm=page.getByRole('button',{name:'これです',exact:true});await confirm.dispatchEvent('pointerdown');
  await page.evaluate(()=>{const s=(window as any).continuousProbe;s.id='continuous-b';s.oracle='oracle-b';});await expect(page.locator('.tentative')).toContainText('Synthetic Beta');
  await confirm.dispatchEvent('click');await expect(page.locator('.scan-history-row')).toHaveCount(0);
  await page.getByRole('button',{name:'違う',exact:true}).click();await page.waitForTimeout(600);await expect(page.locator('.tentative')).toBeHidden();
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('dismiss while metadata pending never resurrects or fabricates result (SYNTHETIC)',async({page})=>{
  await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);
  await page.route('https://api.scryfall.com/cards/continuous-a',async route=>{await pending;await route.fulfill({json:a});});
- await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('continuous-a');
- await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.tentative')).toContainText('取得完了後');
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('continuous-a');
+ await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.tentative')).toContainText('取得完了後');
  await page.getByRole('button',{name:'違う',exact:true}).click();release();await page.waitForTimeout(600);await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('settings invalid/reset and tentative threshold apply with preserved history/manual selection (SYNTHETIC)',async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByText('認識設定（デバッグ）',{exact:true}).click();
- const threshold=page.getByLabel('提案の類似度',{exact:true});await threshold.fill('.7');await threshold.dispatchEvent('change');
- await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await page.waitForTimeout(700);await expect(page.locator('.tentative')).toBeHidden();
- await threshold.fill('.8');await threshold.dispatchEvent('change');await expect(threshold).toHaveValue('0.7');
+ await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
+ const threshold=page.getByLabel('提案の類似度',{exact:true});await openRoute(page,'設定');await threshold.fill('.7');await threshold.dispatchEvent('change');
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await page.waitForTimeout(700);await expect(page.locator('.tentative')).toBeHidden();
+ await openRoute(page,'設定');await threshold.fill('1.1');await threshold.dispatchEvent('change');await expect(threshold).toHaveValue('0.7');
  await page.getByRole('button',{name:'認識設定を初期値に戻す'}).click();await expect(threshold).toHaveValue('0.5');await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
- await page.getByRole('button',{name:'これです',exact:true}).click();await page.getByLabel('加工',{exact:true}).selectOption('foil');
- await page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true}).fill('250');await page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true}).dispatchEvent('change');
+ await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
+ await openRoute(page,'設定');await page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true}).fill('250');await page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true}).dispatchEvent('change');
  await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
-for(const [control,value,score,margin,consecutive] of [
- ['自動受付の類似度','.8',.79,.1,2],['異なるOracleとの最小 margin','.2',.95,.1,2],['自動受付の同じ印刷版の連続観測数','4',.95,.1,4],
-] as const) test(`control affects automatic logic: ${control} (SYNTHETIC)`,async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByText('認識設定（デバッグ）',{exact:true}).click();const input=page.getByLabel(control,{exact:true});await input.fill(value);await input.dispatchEvent('change');
- await page.evaluate(({score,margin})=>{Object.assign((window as any).continuousProbe,{score,margin});},{score,margin});await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
- if(consecutive===4){await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(2);await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.scan-history-row')).toHaveCount(1);}
- else {await page.waitForTimeout(800);await expect(page.locator('.scan-history-row')).toHaveCount(0);await page.getByRole('button',{name:'認識設定を初期値に戻す'}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);}
- await expect(page.locator('.tentative')).toBeHidden();await page.getByRole('button',{name:'停止',exact:true}).click();
+test('all obsolete automatic controls are removed (SYNTHETIC)',async({page})=>{
+ await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
+ for(const name of ['自動受付の類似度','異なるOracleとの最小 margin','自動受付の同じ印刷版の連続観測数'])await expect(page.getByLabel(name,{exact:true})).toHaveCount(0);
+ await expect(page.locator('.recognition-settings input')).toHaveCount(5);
 });
 test('delay and both absence controls change capture/rearm; overlay expiry changes painting (SYNTHETIC)',async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByText('認識設定（デバッグ）',{exact:true}).click();
- const set=async(name:string,value:string)=>{const input=page.getByLabel(name,{exact:true});await input.fill(value);await input.dispatchEvent('change');};
+ await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
+ const set=async(name:string,value:string)=>{await openRoute(page,'設定');const input=page.getByLabel(name,{exact:true});await input.fill(value);await input.dispatchEvent('change');};
  await set('推論完了後の待ち時間 (ms)','700');await set('同じカードの再受付に必要な不在観測数','2');await set('不在の最小継続時間 (ms)','0');await set('四隅の表示期限 (ms)','100');
- await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'違う',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'違う',exact:true}).click();
  const before=await page.evaluate(()=>(window as any).continuousProbe.frames);await page.waitForTimeout(400);expect(await page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(before);await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','false');
  await page.evaluate(()=>{(window as any).continuousProbe.present=false;});await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(before+2);await page.evaluate(()=>{(window as any).continuousProbe.present=true;});await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
-test('320px proposal stays in document flow and network is coalesced (SYNTHETIC)',async({page},info)=>{
- await page.setViewportSize({width:320,height:740});await installSyntheticFlow(page);let requests=0;page.on('request',r=>{if(r.url().endsWith('/cards/continuous-a'))requests++;});
- await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.waitForTimeout(600);expect(requests).toBe(1);
- expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);await page.screenshot({path:info.outputPath('tentative-320.png')});await page.getByRole('button',{name:'停止',exact:true}).click();
+test('320px proposal stays in immersive viewport and network is coalesced (SYNTHETIC)',async({page},info)=>{
+ await page.setViewportSize({width:320,height:740});await installSyntheticFlow(page);let requests=0;let providerRequests=0;page.on('request',r=>{if(r.url().endsWith('/cards/continuous-a'))requests++;if(r.url().includes('api.scryfall.com')||r.url().includes('api.frankfurter.dev'))providerRequests++;});
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(6);expect(requests).toBe(1);expect(providerRequests).toBe(3);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);await page.screenshot({path:info.outputPath('tentative-320.png')});await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('settings discard in-flight old evidence without restarting camera (SYNTHETIC)',async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.evaluate(()=>{(window as any).continuousProbe.latency=1000;});
- await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(1);
+ await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();await page.evaluate(()=>{(window as any).continuousProbe.latency=1000;});
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(1);
  await page.evaluate(()=>{Object.assign(window,{oldStream:document.querySelector('video')!.srcObject});Object.assign((window as any).continuousProbe,{score:.4});});
- const input=page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true});await input.fill('200');await input.dispatchEvent('change');await page.waitForTimeout(1100);await expect(page.locator('.tentative')).toBeHidden();await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(2);
- expect(await page.evaluate(()=>document.querySelector('video')!.srcObject===(window as any).oldStream)).toBe(true);await page.getByRole('button',{name:'停止',exact:true}).click();
+ await openRoute(page,'設定');const input=page.getByLabel('推論完了後の待ち時間 (ms)',{exact:true});await input.fill('200');await input.dispatchEvent('change');await page.waitForTimeout(1100);await expect(page.locator('.tentative')).toBeHidden();await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(2);
+ expect(await page.evaluate(()=>document.querySelector('video')!.srcObject===(window as any).oldStream)).toBe(true);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
-test('file proposal confirms one observation and ignores its late automatic repeat (SYNTHETIC)',async({page})=>{
+test('file proposal confirms exactly one observation with no automatic repeat (SYNTHETIC)',async({page})=>{
  await installSyntheticFlow(page);await page.goto('/');await page.evaluate(()=>{Object.assign((window as any).continuousProbe,{score:.95,margin:.1,latency:600});});
  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=2;return c.toDataURL().split(',')[1]!;});
  await page.locator('#local-image').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
- await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'これです',exact:true}).click();await page.getByLabel('加工',{exact:true}).selectOption('foil');
- await page.waitForTimeout(800);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
+ expect(await page.evaluate(()=>(window as any).continuousProbe.frames)).toBe(1);await page.waitForTimeout(800);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');await expect(page.locator('.scan-history-row')).toHaveCount(1);
 });
 test('absence elapsed control alone delays rearm and reset restores every real value (SYNTHETIC)',async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByText('認識設定（デバッグ）',{exact:true}).click();
- const set=async(name:string,value:string)=>{const input=page.getByLabel(name,{exact:true});await input.fill(value);await input.dispatchEvent('change');};
+ await installSyntheticFlow(page);await page.goto('/');await openRoute(page,'設定'); await page.getByText('認識設定（デバッグ）',{exact:true}).click();
+ const set=async(name:string,value:string)=>{await openRoute(page,'設定');const input=page.getByLabel(name,{exact:true});await input.fill(value);await input.dispatchEvent('change');};
  await set('同じカードの再受付に必要な不在観測数','2');await set('不在の最小継続時間 (ms)','2000');
- await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'違う',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await page.getByRole('button',{name:'違う',exact:true}).click();
  await page.evaluate(()=>{(window as any).continuousProbe.present=false;});await page.waitForTimeout(650);await page.evaluate(()=>{(window as any).continuousProbe.present=true;});await page.waitForTimeout(300);await expect(page.locator('.tentative')).toBeHidden();
  await set('不在の最小継続時間 (ms)','0');await page.evaluate(()=>{(window as any).continuousProbe.present=false;});await page.waitForTimeout(650);await page.evaluate(()=>{(window as any).continuousProbe.present=true;});await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  await page.getByRole('button',{name:'認識設定を初期値に戻す'}).click();
- for(const [name,value] of [['提案の類似度','0.5'],['自動受付の類似度','0.75'],['異なるOracleとの最小 margin','0.025'],['自動受付の同じ印刷版の連続観測数','2'],['推論完了後の待ち時間 (ms)','180'],['同じカードの再受付に必要な不在観測数','3'],['不在の最小継続時間 (ms)','600'],['四隅の表示期限 (ms)','1500']])await expect(page.getByLabel(name!,{exact:true})).toHaveValue(value!);
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ for(const [name,value] of [['提案の類似度','0.5'],['推論完了後の待ち時間 (ms)','180'],['同じカードの再受付に必要な不在観測数','3'],['不在の最小継続時間 (ms)','600'],['四隅の表示期限 (ms)','1500']])await expect(page.getByLabel(name!,{exact:true})).toHaveValue(value!);
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 test('mobile proposal confirmation is visible without scrolling and panel text has contrast (SYNTHETIC)',async({page})=>{
- await page.setViewportSize({width:390,height:844});await installSyntheticFlow(page);await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
+ await page.setViewportSize({width:390,height:844});await installSyntheticFlow(page);await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  await expect(page.getByRole('button',{name:'これです',exact:true})).toBeInViewport();expect(await page.evaluate(()=>scrollY)).toBe(0);
  const contrast=await page.locator('.tentative').evaluate(node=>{
   const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number);
   const lum=(values:number[])=>values.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i]!,0);
   const style=getComputedStyle(node);const fg=lum(rgb(style.color));let parent:Element|null=node;let bg='';while(parent){bg=getComputedStyle(parent).backgroundColor;if(bg!=='rgba(0, 0, 0, 0)')break;parent=parent.parentElement;}const background=lum(rgb(bg));return (Math.max(fg,background)+.05)/(Math.min(fg,background)+.05);
- });expect(contrast).toBeGreaterThanOrEqual(4.5);await page.getByRole('button',{name:'停止',exact:true}).click();
+ });expect(contrast).toBeGreaterThanOrEqual(4.5);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 
 for (const key of ['Space', 'Enter'] as const) test(`held ${key} autorepeat cannot confirm replacement B (SYNTHETIC native keyboard)`, async ({page}, info) => {
- await installSyntheticFlow(page);await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await installSyntheticFlow(page);await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
  await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  // Enter clicks on keydown. Make A metadata unavailable so that its first activation
  // cannot accept A; replacement must still not let the held gesture accept B.
  if(key==='Enter') {
-  await page.getByRole('button',{name:'停止',exact:true}).click();await page.reload();
+  await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();await page.reload();
   await page.route('https://api.scryfall.com/cards/continuous-a',route=>route.abort());
-  await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('取得できません');
+  await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('取得できません');
  }
  await page.evaluate(()=>{Object.assign(window,{activationEvents:[]});document.addEventListener('keydown',event=>{(window as any).activationEvents.push({key:event.key,repeat:event.repeat});});});
  const confirm=page.getByRole('button',{name:'これです',exact:true});await confirm.focus();await page.keyboard.down(key);
@@ -134,16 +131,74 @@ for (const key of ['Space', 'Enter'] as const) test(`held ${key} autorepeat cann
  await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
  // A new gesture after release can confirm the current verified candidate.
  await page.keyboard.press(key);await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);
- await page.getByRole('button',{name:'停止',exact:true}).click();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 
 for(const cancel of ['blur','window blur','pointercancel'] as const) test(`canceled Space gesture via ${cancel} cannot activate replacement (SYNTHETIC)`,async({page})=>{
- await installSyntheticFlow(page);await page.goto('/');await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
+ await installSyntheticFlow(page);await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');
  const confirm=page.getByRole('button',{name:'これです',exact:true});await confirm.focus();await page.keyboard.down('Space');
  if(cancel==='blur'){await page.getByRole('button',{name:'違う',exact:true}).focus();await confirm.focus();}
  else if(cancel==='window blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
  else await confirm.dispatchEvent('pointercancel');
  await page.evaluate(()=>Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b'}));await expect(page.locator('.tentative')).toContainText('Synthetic Beta');
  await page.keyboard.down('Space');await page.keyboard.up('Space');await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
- await page.keyboard.press('Space');await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await page.getByRole('button',{name:'停止',exact:true}).click();
+ await page.keyboard.press('Space');await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+
+test('high score repeated observations never confirm; obsolete auto controls absent (SYNTHETIC)',async({page})=>{
+ await installSyntheticFlow(page);await page.goto('/');await page.evaluate(()=>Object.assign((window as any).continuousProbe,{score:.99,margin:.9}));
+ await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).continuousProbe.frames)).toBeGreaterThanOrEqual(5);
+ await expect(page.locator('.tentative')).toContainText('Synthetic Alpha');await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toBeHidden();
+ await expect(page.getByLabel('自動受付の類似度',{exact:true})).toHaveCount(0);
+ await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+
+test('rich current candidate separates verified Japanese display from physical price/image/expansion (SYNTHETIC)',async({page},info)=>{
+ await installSyntheticFlow(page);
+ const ja={...a,id:'jp-a',lang:'ja',set:'jpn',set_name:'Japanese display only',printed_name:'合成アルファ',prices:{usd:'999'}};
+ await page.route('https://api.scryfall.com/cards/search?**',r=>r.fulfill({json:{data:[a,ja],has_more:false}}));
+ await page.route('https://api.frankfurter.dev/**',r=>r.fulfill({json:{base:'USD',quote:'JPY',rate:150,date:'2026-10-02'}}));
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();
+ const panel=page.locator('.tentative');await expect(panel).toContainText('日本語：合成アルファ');await expect(panel).toContainText('英語：Synthetic Alpha');await expect(panel).toContainText('概算 ￥150');await expect(panel).toContainText('$1.00 USD');await expect(panel).toContainText('Synthetic (TST) #1 · en · nonfoil');
+ await expect(panel.locator('.format-icon')).toHaveCount(7);await expect(panel.locator('img')).toHaveAttribute('src',a.image_uris.normal);await expect(panel).toContainText('Frankfurter / ECB');await expect(panel).toContainText('Scryfall');await expect(page.locator('.result')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);
+ await page.evaluate(()=>{const label=document.createElement('div');label.textContent='SYNTHETIC · camera / worker / metadata / price';label.style.cssText='position:fixed;top:0;left:0;z-index:99;background:#ffe49c;color:#222;font-size:10px;pointer-events:none;padding:2px';document.body.append(label);});
+ await page.screenshot({path:info.outputPath('rich-tentative.png'),fullPage:true});await panel.screenshot({path:info.outputPath('rich-panel.png')});await page.setViewportSize({width:320,height:740});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:info.outputPath('rich-tentative-320.png'),fullPage:true});await panel.screenshot({path:info.outputPath('rich-panel-320.png')});await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+
+for(const price of [null,'0.00'] as const)test(`candidate missing JP/FX and ${price===null?'missing':'zero'} physical price stay truthful (SYNTHETIC)`,async({page})=>{
+ await installSyntheticFlow(page);await page.route('https://api.scryfall.com/cards/continuous-a',r=>r.fulfill({json:{...a,prices:{usd:price}}}));
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();const panel=page.locator('.tentative');
+ await expect(panel).toContainText('日本語名は利用できません');await expect(panel).toContainText('為替を取得できません');
+ if(price===null){await expect(panel).toContainText('この版・言語・加工の価格なし');await expect(panel.locator('.usd')).toHaveCount(0);}
+ else {await expect(panel.locator('.usd')).toHaveText('$0.00 USD');await expect(panel).toContainText('概算JPYは利用できません');}
+ await expect(panel).not.toContainText('概算 ￥');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+test('late A Japanese/image metadata cannot appear on B; B preview preserves confirmed A history and manual finish (SYNTHETIC)',async({page})=>{
+ await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);
+ const richB={...b,set:'bbb',set_name:'Synthetic Beta Expansion',collector_number:'9',prices:{usd:'7'},image_uris:{normal:'https://cards.scryfall.io/normal/beta.jpg'},legalities:{standard:'not_legal',vintage:'restricted'}};
+ await page.route('https://api.scryfall.com/cards/continuous-b',r=>r.fulfill({json:richB}));
+ await page.route('https://api.scryfall.com/cards/search?**',async r=>{
+  if(new URL(r.request().url()).searchParams.get('q')?.includes('oracle-a')){await pending;await r.fulfill({json:{data:[{...a,id:'ja-a',lang:'ja',printed_name:'遅い合成アルファ'}],has_more:false}}).catch(()=>{});}
+  else await r.fulfill({json:{data:[richB,{...richB,id:'ja-b',lang:'ja',printed_name:'合成ベータ'}],has_more:false}});
+ });
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative .usd')).toHaveText('$1.00 USD');
+ await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
+ const history=await page.locator('.scan-history-row').allTextContents();
+ await page.evaluate(()=>{Object.assign((window as any).continuousProbe,{id:'continuous-b',oracle:'oracle-b'});});
+ const panel=page.locator('.tentative');await expect(panel).toContainText('英語：Synthetic Beta');await expect(panel).toContainText('合成ベータ');await expect(panel.locator('.usd')).toHaveText('$7.00 USD');release();
+ await expect(panel).toContainText('Synthetic Beta Expansion (BBB) #9 · en · nonfoil');await expect(panel.locator('img')).toHaveAttribute('src',richB.image_uris.normal);
+ await expect(panel.locator('[data-format="standard"]')).toHaveAttribute('data-status','not_legal');await expect(panel.locator('[data-format="vintage"]')).toHaveAttribute('data-status','restricted');await expect(panel).not.toContainText('遅い合成アルファ');await expect(panel).not.toContainText('$1.00');
+ await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');expect(await page.locator('.scan-history-row').allTextContents()).toEqual(history);await expect(page.locator('.result .identity')).toContainText('Synthetic Alpha');await expect(page.locator('.target')).toContainText('TST #1 · en · Foil');
+ await closeRoute(page); await page.getByRole('button',{name:'これです',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(2);await expect(page.locator('.result h2')).toHaveText('合成ベータ');await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+test('progressive candidate FX preserves focus, scroll and physical image DOM (SYNTHETIC)',async({page})=>{
+ await installSyntheticFlow(page);let release!:()=>void;const pending=new Promise<void>(r=>release=r);
+ await page.route('https://api.frankfurter.dev/**',async r=>{await pending;await r.fulfill({json:{base:'USD',quote:'JPY',rate:150,date:'2026-10-02'}});});
+ await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'カメラでスキャン',exact:true}).click();await expect(page.locator('.tentative .usd')).toHaveText('$1.00 USD');
+ await page.getByRole('button',{name:'候補パネルを拡大'}).click();
+ const control=page.getByRole('button',{name:'これです',exact:true});await control.focus();const y=await page.evaluate(()=>{(window as any).candidateImage=document.querySelector('.tentative img');document.querySelector('.candidate-details')!.scrollTop=10;return scrollY;});const internal=await page.locator('.candidate-details').evaluate(n=>n.scrollTop);release();
+ await expect(page.locator('.tentative .price')).toHaveText('概算 ￥150');expect(await page.locator('.candidate-details').evaluate(n=>n.scrollTop)).toBe(internal);await expect(control).toBeFocused();expect(await page.evaluate(()=>scrollY)).toBe(y);expect(await page.evaluate(()=>(window as any).candidateImage===document.querySelector('.tentative img'))).toBe(true);await expect(page.locator('.scan-history-row')).toHaveCount(0);
+ await closeRoute(page); await page.getByRole('button',{name:'停止',exact:true}).click();
 });

@@ -23,6 +23,7 @@ export function formatStatuses(legalities?: Readonly<Record<string, string>>) {
 // Persistent disclosure and controls: price refreshes do not reset focus/open state.
 // Letter badges are app-made navigation aids, never official format marks.
 export class FormatLegality {
+  constructor(private readonly disclosureId = 'format-disclosure') {}
   readonly node = el('section', '', 'format-legality');
   private signature = '';
   private open: string | null = null;
@@ -33,7 +34,7 @@ export class FormatLegality {
     this.signature = signature; this.open = null;
     const heading = el('p', 'フォーマットの使用可否', 'small');
     const row = el('div', '', 'format-icons'); row.setAttribute('role', 'group'); row.setAttribute('aria-label', '紙の主要フォーマット');
-    const disclosure = el('p', '', 'format-disclosure small'); disclosure.id = 'format-disclosure'; disclosure.hidden = true;
+    const disclosure = el('p', '', 'format-disclosure small'); disclosure.id = this.disclosureId; disclosure.hidden = true;
     for (const format of rows) {
       const control = button('', () => {
         this.open = this.open === format.key ? null : format.key;
