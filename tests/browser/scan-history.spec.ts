@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
 // SYNTHETIC worker, input pixels, metadata and provider responses. No recognition accuracy evidence.
 const imageUrl = 'https://cards.scryfall.io/small/front/a/a/synthetic.jpg';
 const a = { id: 'history-a', oracle_id: 'oracle-a', name: 'Synthetic Alpha', lang: 'en', set: 'tst', set_name: 'Synthetic Set', collector_number: '1', finishes: ['nonfoil', 'foil'], prices: { usd: null, usd_foil: null }, legalities: {}, image_uris: { small: imageUrl, normal: imageUrl } };
@@ -63,9 +62,8 @@ test('session history preserves scans, updates the original selection and reopen
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(await page.locator('.scan-history-list').evaluate(node => getComputedStyle(node).overflowY)).toBe('visible');
   if (info.project.name === 'mobile-viewport') {
-    const dir = '/Users/dikeda/workspace/mtg-card-scanner-research/combined-camera-ui'; await mkdir(dir, { recursive: true });
-    await page.screenshot({ path: `${dir}/mobile-history.png`, fullPage: false });
-    await page.screenshot({ path: `${dir}/mobile-full-page.png`, fullPage: true });
+    await page.screenshot({ path: info.outputPath(`mobile-history.png`), fullPage: false });
+    await page.screenshot({ path: info.outputPath(`mobile-full-page.png`), fullPage: true });
   }
   await page.reload(); await expect(page.locator('.scan-history')).toBeHidden();
 });

@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
 // SYNTHETIC worker, input pixels, metadata and provider responses. No recognition accuracy evidence.
 const imageUrl = 'https://cards.scryfall.io/small/front/a/a/synthetic.jpg';
 const a = { id: 'history-a', oracle_id: 'oracle-a', name: 'Synthetic Alpha', lang: 'en', set: 'tst', set_name: 'Synthetic Set', collector_number: '1', finishes: ['nonfoil', 'foil'], prices: { usd: '1.00', usd_foil: '2.00' }, legalities: { standard: 'legal', pioneer: 'banned', modern: 'not_legal', vintage: 'restricted' }, image_uris: { small: imageUrl, normal: imageUrl } };
@@ -33,14 +32,13 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://cards.scryfall.io/**', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="488" height="680"><rect width="488" height="680" fill="#444"/><text x="20" y="100" fill="white" font-size="32">SYNTHETIC</text></svg>' }));
 });
 
-const evidence = '/Users/dikeda/workspace/mtg-card-scanner-research/combined-camera-ui';
 test('combined accepted scan, physical override, older reopen and all widgets (SYNTHETIC)', async ({ page }, info) => {
-  await mkdir(evidence, { recursive: true }); await page.goto('/');
+  await page.goto('/');
   for (const width of [info.project.name === 'desktop' ? 1280 : 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(page.getByRole('searchbox')).toBeInViewport();
     await expect(page.locator('#local-image')).toBeInViewport();
-    await page.screenshot({ path: `${evidence}/combined-${info.project.name}-${width}-initial.png` });
+    await page.screenshot({ path: info.outputPath(`combined-${info.project.name}-${width}-initial.png`) });
   }
   await page.setViewportSize(info.project.name === 'desktop' ? { width: 1280, height: 900 } : { width: 390, height: 844 });
   await scan(page, a.id); await expect(page.locator('.price')).toHaveText('概算 ￥150');
@@ -75,10 +73,10 @@ test('combined accepted scan, physical override, older reopen and all widgets (S
     await expect(page.locator('.format-icons')).toBeInViewport();
     await expect(page.getByRole('button', { name: '次のカードをスキャン', exact: true })).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: `${evidence}/combined-${info.project.name}-${width}-result.png` });
+    await page.screenshot({ path: info.outputPath(`combined-${info.project.name}-${width}-result.png`) });
     await page.locator('.scan-history').scrollIntoViewIfNeeded();
     expect(await page.locator('.scan-history-list').evaluate(node => getComputedStyle(node).overflowY)).toBe('visible');
-    await page.screenshot({ path: `${evidence}/combined-${info.project.name}-${width}-history.png`, fullPage: true });
+    await page.screenshot({ path: info.outputPath(`combined-${info.project.name}-${width}-history.png`), fullPage: true });
   }
 });
 test('new scan and late FX keep DFC face, format disclosure, focus and scroll (SYNTHETIC)', async ({ page }) => {

@@ -26,7 +26,7 @@ test('icon order, all statuses, tap/keyboard disclosure and fresh card reset', a
   await icons.nth(6).focus(); await page.keyboard.press('Space'); await expect(page.locator('.format-disclosure')).toContainText('使用可否不明');
   if (info.project.name === 'mobile-viewport') {
     await page.locator('.format-legality').scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '/Users/dikeda/workspace/mtg-card-scanner-research/combined-camera-ui/synthetic-mobile.png', fullPage: true });
+    await page.screenshot({ path: info.outputPath('synthetic-mobile.png'), fullPage: true });
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
