@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    "Preserve the known intermittent smoke.spec.ts:75 timeout as unresolved historical evidence: this independent full run passed 104/104, but its root cause was not diagnosed and this review does not claim it resolved.",
+    "Consider promoting the independent dismissal, accepted-Enter-repeat, restart and fresh assistive-activation probes into maintained coverage."
+  ],
+  "summary": "PASS for bounded QA-LIVE-001 re-review: the original byte-identical held-Space reproduction passes, including three additional repetitions; no input regression was found in scoped review or exercised checks. Independent npm ci, check (158 tests), build, full 104 E2E tests and 16 independent probes all passed. No product changes.",
+  "base": "db9264326997fc1c43050dcba656a1e9adce8248",
+  "patch_sha256": "4a300f894307db88e7a4a6e506e0880b750cb897b234c93afbe058a6861b54e3",
+  "patch_path": "/Users/dikeda/workspace/mtg-card-scanner-research/live-candidate-fixed-review.patch",
+  "worktree": "/Users/dikeda/workspace/mtg-card-scanner-worktrees/qa-live-candidate-fixed",
+  "report": "/Users/dikeda/workspace/mtg-card-scanner-research/live-candidate-fixed-review.md",
+  "evidence": "/Users/dikeda/workspace/mtg-card-scanner-worktrees/qa-live-candidate-fixed/research/qa-live-candidate-fixed/",
+  "scope": "Delta versus previously reviewed candidate: src/main.ts gesture lifecycle, tests/browser/live-candidate.spec.ts and docs/reports/live-candidate-fix.md only. Prior accepted parts were not broadly re-reviewed.",
+  "finding_resolution": {
+    "id": "QA-LIVE-001",
+    "status": "fixed",
+    "evidence": "Original independent.spec.ts copied byte-for-byte; held Space begun on A, replacement B, repeat=true and keyup produced zero history entries. One normal run and three additional repeat runs passed.",
+    "reason": "Keyboard snapshot is copied/frozen at initial keydown; native activation is prevented and repeats ignored. Enter activates once on initial down, Space on matching up; canceled/stale gestures cannot fall back to the new proposal. Fresh subsequent gestures still work."
+  },
+  "checks": {
+    "npm_ci": "PASS; audit reported zero vulnerabilities",
+    "npm_run_check": "PASS; typecheck and 158 unit/regression tests across 19 files",
+    "npm_run_build": "PASS",
+    "full_e2e": "104 passed on first independent run, 39.0s, MVP_PORT=4251",
+    "independent_probes": "16 passed, 14.2s: original seven unchanged probes plus nine independently added lifecycle probes",
+    "original_repro_additional_repetitions": "3 passed",
+    "coverage": [
+      "Native Space/Enter autorepeat, replacement and fresh gesture recovery",
+      "Button blur, window blur and pointercancel regressions in maintained suite",
+      "Fresh pointer, Space, Enter and click-only assistive-style activation",
+      "Held Space/Enter dismissal cannot dismiss replacement B",
+      "Held Enter after accepting A cannot accept B on repeat",
+      "Held Space canceled by camera stop/restart cannot confirm new session B",
+      "Canceled pointer blocks stale click; fresh pointer still confirms",
+      "Original stale evidence, manual finish, provider identity, hostile text/URL and debug input probes"
+    ]
+  },
+  "snapshot_verification": "All 112 baseline repository/product files unchanged; no unexpected files outside owned research/qa-live-candidate-fixed output. Original repro byte identity verified. HEAD and expected patch SHA256 unchanged; reverse patch check succeeds. Playwright-managed servers exited and own port 4251 has no listener. No port 4195 access, commit or push.",
+  "limitations": [
+    "Synthetic camera/worker/provider fixtures and desktop Chromium/mobile viewport only; no actual model accuracy, physical camera/device or sustained-performance acceptance.",
+    "Click-only activation checks are not a screen-reader device test.",
+    "No private inputs, model downloads, image uploads or public deployment.",
+    "Scoped security/logic delta review, not a complete security audit; historical smoke timeout remains undiagnosed."
+  ]
+}

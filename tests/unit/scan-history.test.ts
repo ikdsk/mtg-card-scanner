@@ -19,3 +19,9 @@ test('bounded collection rejects late generations even after eviction; reset/bro
   expect(h.entries.map(x => x.generation)).toEqual([4, 3]);
   expect(() => new ScanHistory(0)).toThrow();
 });
+test('continuous acceptance reserves each event before delayed metadata; superseded events remain truthful (SYNTHETIC)', () => {
+ const h = new ScanHistory(); h.reserve(1,'a'); h.reserve(2,'b'); h.fail(1,'情報取得を中断しました');
+ h.accept(2,{...card,id:'b'},'nonfoil');
+ expect(h.allEntries.map(x=>x.generation)).toEqual([2,1]);
+ expect(h.allEntries[1]).toMatchObject({card:null,cardId:'a',status:'情報取得を中断しました'});
+});
