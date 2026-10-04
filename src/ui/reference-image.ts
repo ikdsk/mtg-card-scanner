@@ -63,7 +63,7 @@ export class ReferenceImage {
     const credit = el('p', '', 'small muted'); const link = el('a', 'Scryfall');
     link.href = safeScryfallUrl(card.scryfall_uri, 'link') ?? `https://scryfall.com/search?q=${encodeURIComponent(`id:${card.id}`)}`;
     link.target = '_blank'; link.rel = 'noopener noreferrer';
-    credit.append(document.createTextNode('画像提供：'), link, document.createTextNode(' · 実物の版・言語・加工を確認してください。'));
+    credit.append(document.createTextNode('画像提供：'), link, document.createTextNode(' · 参照画像'));
     this.node.replaceChildren(caption, region, switches, credit);
   }
 }
