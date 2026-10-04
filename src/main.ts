@@ -2,6 +2,7 @@ import './ui/style.css';
 import { el, button, label } from './ui/dom.js';
 import { Repository, FxProvider } from './data/repository.js';
 import type { Card, Face } from './data/cards.js';
+import { ReferenceImage } from './ui/reference-image.js';
 import { ResultSession } from './ui/session.js';
 import { formatReferencePrice } from './domain/pricing.js';
 import { Recognizer } from './recognition/adapter.js';
@@ -48,7 +49,7 @@ for (const [name, href] of [['Scryfall', 'https://scryfall.com'], ['Frankfurter 
 }
 footer.append(sources, el('p', 'ローカル・内部検証版。認識コードとモデルはAGPL-3.0。公開・配布前にライセンス対応と公開承認が必要です。カードの権利はWizards of the Coast等の権利者に帰属します。', 'small'));
 const notices = el('a', '第三者ライセンスと利用条件'); notices.href = '/recognition/THIRD-PARTY-NOTICES.md'; footer.append(notices);
-const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。画像は保存せず、解析ログはこのタブのメモリ内のみです。分析サービスへの送信はありません。'));
+const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。参照画像はScryfallの画像配信元から取得します。撮影・選択画像は保存せず、解析ログはこのタブのメモリ内のみです。分析サービスへの送信はありません。'));
 footer.append(privacy);
 const debug = el('details'); debug.append(el('summary', '端末内の計測ログ')); const debugOutput = el('pre');
 debug.append(button('計測を表示', () => { debugOutput.textContent = JSON.stringify(marks, null, 2); }), debugOutput); footer.append(debug);
@@ -62,6 +63,7 @@ let printingCards: Card[] = []; let jp: Card | null = null; let printStatus = ''
 let searchGeneration = 0; let searchRequest: AbortController | null = null; let nextPage: string | null = null;
 const gate = new StabilityGate();
 const recognizer = new Recognizer(message => { modelStatus.textContent = message; });
+const referenceImage = new ReferenceImage();
 const session = new ResultSession((id, signal) => repo.card(id, signal), signal => fx.latest(signal), renderResult);
 
 async function prepare(): Promise<boolean> {
@@ -190,6 +192,7 @@ function appendSearch(cards: Card[]): void {
   }
 }
 async function openId(id: string, origin: string): Promise<void> {
+  session.reset();
   const generation = ++detailGeneration; detailRequest?.abort(); const request = new AbortController(); detailRequest = request;
   try { const c = await repo.card(id, request.signal); if (generation === detailGeneration) await openCard(c, origin); }
   catch (error) { if (generation === detailGeneration) cameraStatus.textContent = errorText(error, '候補情報を取得できません。名前検索で再試行してください。'); }
@@ -216,7 +219,7 @@ function choose(c: Card, finish = session.value.finish): void {
   source = '手動指定 · 認識結果で変更されません'; void session.select(c, available);
 }
 function renderResult(): void {
-  const value = session.value; const c = value.card; if (!c) { result.hidden = true; result.replaceChildren(); return; }
+  const value = session.value; const c = value.card; if (!c) { referenceImage.clear(); result.hidden = true; result.replaceChildren(); return; }
   result.hidden = false; const nodes: HTMLElement[] = [];
   const focused = result.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
   const focusLabel = focused?.getAttribute('aria-label');
@@ -225,6 +228,7 @@ function renderResult(): void {
   nodes.push(button('スキャンに戻る', () => {
     scan.scrollIntoView({ block: 'start', behavior: 'instant' }); start.focus({ preventScroll: true });
   }));
+  referenceImage.update(c); nodes.push(referenceImage.node);
   const controls = el('div', '', 'controls');
   const language = el('select'); language.setAttribute('aria-label', '選択版の言語');
   options(language, [...new Set(printingCards.map(x => x.lang))].map(l => [l, l === 'ja' ? '日本語 (ja)' : l === 'en' ? '英語 (en)' : l]), c.lang);
