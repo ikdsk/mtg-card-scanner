@@ -70,3 +70,13 @@ html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 /* Expansion always increases the panel, including keyboard/landscape viewports. */
 #app.short-viewport .candidate-dock{flex-basis:min(var(--dock-height),73%)}
 #app.short-viewport .candidate-dock[data-expanded=true]{--dock-height:82%;flex-basis:var(--dock-height)}
+
+/* One camera toolbar row, with a reserved 44px settings target at the right. */
+#app .viewport header{padding:8px 12px}
+#app .viewport header button{height:44px;min-width:44px;min-height:44px;padding:10px;display:grid;place-items:center}
+#app .action-panel{top:8px;left:12px;right:64px}
+#app .action-panel>.actions{flex-wrap:wrap;align-items:flex-start}
+#app .action-panel button{height:44px;min-height:44px;min-width:44px;padding:7px 10px;font-size:.8rem}
+/* Retry can wrap without being clipped by the dock in short viewports. */
+#app .scan-panel:has(.action-panel button:not([hidden]):nth-child(3)){min-height:112px}
+#app .viewport header button{width:44px}
