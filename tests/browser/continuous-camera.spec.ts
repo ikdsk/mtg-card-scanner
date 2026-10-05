@@ -17,7 +17,7 @@ async function installSyntheticFlow(page: Page) {
  await page.route('https://api.scryfall.com/**',route=>{const url=new URL(route.request().url());return route.fulfill({json:url.pathname.endsWith('/search')?{data:url.searchParams.get('q')?.includes('oracle-b')?[b]:[a],has_more:false}:url.pathname.endsWith('/continuous-b')?b:a});});
  await page.route('https://api.frankfurter.dev/**',r=>r.fulfill({status:503,json:{}}));
 }
-test('continuous camera accepts A→B, suppresses stationary/manual jitter, rearms removal and clears overlay',async({page},info)=>{
+test('continuous camera accepts A→B, suppresses stationary jitter, rearms removal and clears overlay',async({page},info)=>{
  await installSyntheticFlow(page);
  await page.goto('/');await page.screenshot({path:info.outputPath('initial.png')});
  await closeRoute(page); await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
@@ -28,12 +28,11 @@ test('continuous camera accepts A→B, suppresses stationary/manual jitter, rear
  await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
  expect(await page.evaluate(()=>scrollY)).toBe(0);
  await page.screenshot({path:info.outputPath('accepted.png')});
- await openRoute(page,'確定カード'); await page.getByLabel('加工',{exact:true}).selectOption('foil');
  await page.evaluate(()=>{const s=(window as any).continuousProbe;s.id='printing-jitter';});
- await page.waitForTimeout(800);await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');
+ await page.waitForTimeout(800);await expect(page.locator('.scan-history-row')).toHaveCount(1);
  await page.evaluate(()=>{const s=(window as any).continuousProbe;s.id='continuous-b';s.oracle='oracle-b';});
- await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
- await expect(page.locator('.scan-history-row')).toHaveCount(2);await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');
+ await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
+ await expect(page.locator('.scan-history-row')).toHaveCount(2);await expect(page.locator('.scan-history-row').first()).toContainText('Synthetic Beta');
  await page.evaluate(()=>{(window as any).continuousProbe.present=false;});
  await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','false');await page.waitForTimeout(1000);
  await page.evaluate(()=>{(window as any).continuousProbe.present=true;});await expect(page.locator('.detection-overlay')).toHaveAttribute('data-detected','true');await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(3);
@@ -54,7 +53,7 @@ test('new tentative candidate rejects delayed old metadata; only confirmation re
  await page.goto('/');await closeRoute(page); await page.getByRole('button',{name:'スキャン開始',exact:true}).click();
  await expect(page.locator('.empty-candidate')).toContainText('カード情報を確認中');await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('body')).not.toContainText('continuous-a');await expect(page.locator('.scan-history-row')).toHaveCount(0);
  await page.evaluate(()=>{const s=(window as any).continuousProbe;s.id='continuous-b';s.oracle='oracle-b';});
- await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);
+ await expect(page.locator('.tentative')).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.scan-history-row').first()).toContainText('Synthetic Beta');await expect(page.locator('.scan-history-row')).toHaveCount(1);
  release();await expect(page.locator('.scan-history-row')).toHaveCount(1);
- await expect(page.locator('.result h2')).toHaveText('Synthetic Beta');await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
+ await expect(page.locator('.scan-history-row').first()).toContainText('Synthetic Beta');await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
 });

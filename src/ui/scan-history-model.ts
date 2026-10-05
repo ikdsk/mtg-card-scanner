@@ -1,5 +1,5 @@
 import type { Card } from '../data/cards.js';
-export type ScanHistoryEntry = { generation: number; card: Card; finish: string };
+export type ScanHistoryEntry = { generation: number; card: Card; finish: string; faceIndex?: number | undefined };
 export type PendingScanHistoryEntry = { generation: number; card: null; cardId: string; status: string };
 // Tab-only public metadata snapshots. No image pixels, files or embeddings; rows never show prices.
 export class ScanHistory {
@@ -23,13 +23,14 @@ export class ScanHistory {
     this.items = this.items.filter(x=>retained.has(x.generation)); this.pending = this.pending.filter(x=>retained.has(x.generation));
   }
   update(generation: number, card: Card, finish: string): void {
-    this.items = this.items.map(entry => entry.generation === generation ? { generation, card: structuredClone(card), finish } : entry);
+    this.items = this.items.map(entry => entry.generation === generation ? { generation, card: structuredClone(card), finish, ...(entry.card.id === card.id && entry.faceIndex !== undefined ? { faceIndex: entry.faceIndex } : {}) } : entry);
   }
-  accept(generation: number, card: Card, finish: string): void {
+  // faceIndex is the recognized DFC face; read-only reopening starts on that face.
+  accept(generation: number, card: Card, finish: string, faceIndex?: number): void {
     if (generation <= this.latestGeneration && !this.pending.some(x=>x.generation===generation)) return;
     this.latestGeneration = Math.max(this.latestGeneration, generation);
     this.pending = this.pending.filter(x=>x.generation!==generation);
-    this.items = [{ generation, card: structuredClone(card), finish }, ...this.items].sort((a,b)=>b.generation-a.generation);
+    this.items = [{ generation, card: structuredClone(card), finish, ...(faceIndex === undefined ? {} : { faceIndex }) }, ...this.items].sort((a,b)=>b.generation-a.generation);
     this.trim();
   }
 }

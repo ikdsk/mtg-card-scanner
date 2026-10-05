@@ -1,8 +1,10 @@
 import { openRoute, closeRoute } from './immersive-routes.js';
+import type { Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 // Entire provider network in these tests is SYNTHETIC. No live evidence.
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'カードの詳細', exact: true });
 const base = { id: 'en1', oracle_id: 'oracle1', name: 'Lightning Bolt', lang: 'en', set: 'tst', set_name: 'Synthetic Set', collector_number: '1', finishes: ['nonfoil', 'foil', 'etched'], prices: { usd: '0.00', usd_foil: '2.00', usd_etched: null }, legalities: { modern: 'legal' }, oracle_text: 'Synthetic English rules', type_line: 'Instant', mana_cost: '{R}' };
 const ja = { ...base, id: 'ja1', lang: 'ja', printed_name: '稲妻', printed_text: '合成の日本語印刷本文', prices: { usd: null, usd_foil: null, usd_etched: null } };
 const edition = { ...base, id: 'en2', set: 'alt', set_name: 'Synthetic Alternate', collector_number: '2', prices: { usd: '3.00', usd_foil: '4.00', usd_etched: null } };
@@ -28,16 +30,17 @@ test.beforeEach(async ({ page, context }) => {
   });
   await page.route('https://api.frankfurter.dev/**', route => route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }));
 });
-test('manual JP/EN search, Japanese display, exact edition/language/finish and null/zero', async ({ page }) => {
+test('manual JP/EN search opens the read-only sheet with Japanese display, exact printing price and null/zero', async ({ page }) => {
   await page.goto('/'); await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('稲妻'); await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.getByRole('heading', { name: '稲妻', exact: true, level: 2 })).toBeVisible();
-  await expect(page.locator('.usd')).toHaveText('$0.00 USD'); await expect(page.locator('.yen')).toHaveText('概算 ￥0');
-  await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).selectOption('foil'); await expect(page.locator('.usd')).toHaveText('$2.00 USD');
-  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption('en2'); await expect(page.locator('.usd')).toHaveText('$4.00 USD'); await expect(page.locator('.target')).toContainText('ALT #2 · en · Foil');
-  await openRoute(page,'確定カード'); await page.getByLabel('選択版の言語').selectOption('ja'); await expect(page.locator('.price')).toHaveText('この版・言語・加工の価格なし'); await expect(page.locator('.target')).toContainText('ja · Foil');
-  await page.getByText('カード本文・ルール', { exact: true }).click();
-  await expect(page.getByText('合成の日本語印刷本文')).toBeVisible(); await expect(page.getByText('Synthetic English rules')).toBeVisible();
+  const detail = sheet(page); await expect(detail).toBeVisible(); await expect(page.locator('.utility-drawer')).toBeHidden();
+  await expect(detail.locator('.candidate-name')).toHaveText('稲妻'); await expect(detail.locator('.candidate-english')).toHaveText('Lightning Bolt');
+  await expect(detail.locator('.usd')).toHaveText('$0.00 USD'); await expect(detail.locator('.price')).toHaveText('参考価格 ￥0');
+  await detail.getByRole('button', { name: /Synthetic Alternate/ }).click();
+  await expect(detail.locator('.usd')).toHaveText('$3.00 USD'); await expect(detail).toContainText('Synthetic Alternate (ALT) #2 · en · nonfoil');
+  await detail.getByRole('button', { name: /Synthetic Set \(TST\) #1 · ja/ }).click();
+  await expect(detail.locator('.price')).toHaveText('この版・言語・加工の価格なし'); await expect(detail).toContainText('Synthetic Set (TST) #1 · ja · nonfoil');
+  await expect(detail.locator('.candidate-rules')).toContainText('合成の日本語印刷本文'); await expect(detail.locator('.candidate-rules')).toContainText('Synthetic English rules');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth); expect(overflow).toBe(false);
 });
 test('camera permission denial leaves manual search usable', async ({ page }) => {
@@ -53,7 +56,8 @@ test('camera permission denial leaves manual search usable', async ({ page }) =>
 test('FX error keeps USD and no invented yen', async ({ page }) => {
   await page.route('https://api.frankfurter.dev/**', route => route.fulfill({ status: 503, json: { error: 'SYNTHETIC' } }));
   await page.goto('/'); await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('Bolt'); await page.getByRole('button', { name: '検索', exact: true }).click(); await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.locator('.usd')).toHaveText('$0.00 USD'); await expect(page.getByText('為替を取得できません。USDのみ表示します。')).toBeVisible(); await expect(page.locator('.yen')).toHaveCount(0); await expect(page.locator('.price')).toHaveText('概算JPYは利用できません');
+  const detail = sheet(page);
+  await expect(detail.locator('.usd')).toHaveText('$0.00 USD'); await expect(detail.getByText('為替を取得できません。USDのみ表示します。')).toBeVisible(); await expect(detail.getByText(/参考価格 ￥/)).toHaveCount(0); await expect(detail.locator('.price')).toHaveText('概算JPYは利用できません');
 });
 
 test('worker retains init sent while runtime module import is pending (SYNTHETIC runtime)', async ({ page, context }) => {
@@ -104,10 +108,10 @@ test('manual correction search discards a delayed recognition card response (SYN
   release(); await delivery;
   await expect(page.locator('.search-results button')).toHaveCount(1);
   await page.waitForTimeout(200); // Deliver/handle the explicitly controlled late response.
-  await expect(page.locator('.result')).toBeHidden();
+  await expect(page.locator('.tentative')).toBeHidden(); await expect(sheet(page)).toBeHidden();
 });
 
-test('new manual result enters viewport once; delayed updates preserve scroll, focus and input (SYNTHETIC)', async ({ page }) => {
+test('manual result sheet enters the viewport once; delayed FX preserves scroll, focus and the search input (SYNTHETIC)', async ({ page }) => {
   let release!: () => void;
   const delayed = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://api.frankfurter.dev/**', async route => { await delayed; await route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }); });
@@ -115,26 +119,20 @@ test('new manual result enters viewport once; delayed updates preserve scroll, f
   await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('Bolt');
   await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.locator('.result h2')).toBeInViewport();
-  await expect(page.getByRole('button', { name: 'スキャンに戻る', exact: true })).toBeInViewport();
-  await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
-  await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).selectOption('foil');
-  await expect(page.locator('.usd')).toHaveText('$2.00 USD');
-  await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).focus();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  const before = await page.evaluate(() => scrollY);
+  const detail = sheet(page); await expect(detail).toBeInViewport(); await expect(detail.locator('.price')).toHaveText('概算JPYは利用できません');
+  await expect(detail.locator('.printing-item')).toHaveCount(3);
+  const close = page.getByRole('button', { name: '閉じる', exact: true }); await expect(close).toBeFocused();
+  const body = page.locator('.detail-sheet-body'); await body.evaluate(node => { node.scrollTop = 10; });
+  const before = await body.evaluate(node => node.scrollTop); const y = await page.evaluate(() => scrollY);
   release();
-  await expect(page.locator('.yen')).toHaveText('概算 ￥300');
-  expect(await page.evaluate(() => scrollY)).toBe(before);
-  await expect(page.getByLabel('加工', { exact: true })).toBeFocused();
-  await expect(page.getByLabel('加工', { exact: true })).toHaveValue('foil');
-  await expect(page.locator('.search-form input')).toHaveValue('Bolt');
-  await page.getByRole('button', { name: 'スキャンに戻る', exact: true }).click();
+  await expect(detail.locator('.price')).toHaveText('参考価格 ￥0');
+  expect(await body.evaluate(node => node.scrollTop)).toBe(before); expect(await page.evaluate(() => scrollY)).toBe(y); await expect(close).toBeFocused();
+  await close.click(); await expect(detail).toBeHidden();
   await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeInViewport();
-  await expect(page.getByRole('button', { name: 'スキャン開始', exact: true })).toBeFocused();
+  await openRoute(page,'名前検索'); await expect(page.locator('.search-form input')).toHaveValue('Bolt');
 });
 
-test('recognized candidate requires confirmation; result and return action can be deliberately viewed (SYNTHETIC worker/image)', async ({ page }) => {
+test('recognized candidate requires confirmation; history entry can be deliberately viewed in the sheet (SYNTHETIC worker/image)', async ({ page }) => {
   await page.addInitScript(() => {
     class SyntheticWorker {
       onmessage: ((event: { data: unknown }) => void) | null = null;
@@ -149,13 +147,13 @@ test('recognized candidate requires confirmation; result and return action can b
   await page.goto('/');
   const image = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 2; return c.toDataURL().split(',')[1]!; });
   await page.locator('#local-image').setInputFiles({ name: 'SYNTHETIC.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') });
-  await expect(page.locator('.tentative')).toContainText('Lightning Bolt');await expect(page.locator('.result')).toBeHidden();await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
-  await openRoute(page,'確定カード');
-  await expect(page.locator('.result h2')).toBeInViewport();
-  await expect(page.getByRole('button', { name: 'スキャンに戻る', exact: true })).toBeInViewport();
+  await expect(page.locator('.tentative')).toContainText('Lightning Bolt');await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page); await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
+  await openRoute(page,'履歴'); await page.locator('.scan-history-row').click();
+  await expect(sheet(page)).toBeInViewport(); await expect(sheet(page).locator('.candidate-name')).toBeInViewport();
+  await expect(page.getByRole('button', { name: '閉じる', exact: true })).toBeInViewport();
 });
 
-test('printing-list and price refresh rerenders keep user position and focus (SYNTHETIC)', async ({ page }) => {
+test('late printing list keeps the sheet position and focus (SYNTHETIC)', async ({ page }) => {
   let release!: () => void;
   const delayed = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://api.scryfall.com/cards/search**', async route => {
@@ -166,17 +164,12 @@ test('printing-list and price refresh rerenders keep user position and focus (SY
   await page.goto('/'); await openRoute(page,'名前検索'); await page.getByRole('searchbox').fill('Bolt');
   await page.getByRole('button', { name: '検索', exact: true }).click();
   await page.getByRole('button', { name: /Lightning Bolt.*TST/ }).click();
-  await expect(page.locator('.usd')).toHaveText('$0.00 USD');
-  await openRoute(page,'確定カード'); await page.getByLabel('加工', { exact: true }).focus();
-  await page.evaluate(() => scrollTo(0, 0));
+  const detail = sheet(page); await expect(detail.locator('.usd')).toHaveText('$0.00 USD'); await expect(detail).toContainText('版の一覧を取得中…');
+  const close = page.getByRole('button', { name: '閉じる', exact: true }); await expect(close).toBeFocused();
+  const body = page.locator('.detail-sheet-body'); await body.evaluate(node => { node.scrollTop = 0; });
   release();
-  await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
-  expect(await page.evaluate(() => scrollY)).toBe(0);
-  await expect(page.getByLabel('加工', { exact: true })).toBeFocused();
-  await page.getByRole('button', { name: '価格・為替を再確認', exact: true }).click();
-  const position = await page.evaluate(() => scrollY);
-  await expect(page.locator('.usd')).toHaveText('$0.00 USD');
-  await expect(page.locator('.yen')).toHaveText('概算 ￥0');
-  expect(await page.evaluate(() => scrollY)).toBe(position);
-  await expect(page.getByRole('button', { name: '価格・為替を再確認', exact: true })).toBeFocused();
+  await expect(detail.locator('.printing-item')).toHaveCount(3);
+  expect(await page.evaluate(() => scrollY)).toBe(0); await expect(close).toBeFocused();
+  await expect(detail.locator('.candidate-name')).toHaveText('稲妻');
+  await expect(detail.locator('.usd')).toHaveText('$0.00 USD'); await expect(detail.locator('.price')).toHaveText('参考価格 ￥0');
 });

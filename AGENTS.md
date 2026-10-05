@@ -8,7 +8,8 @@
 - Read docs/development-plan.md, docs/contracts.md and assigned brief before editing.
 
 ## Model assignment
-- Implementation agents use GPT-6.1-Sol (`gpt-6.1-sol`) as explicitly requested by the user.
+- Coordinator (planning/integration/verification) uses Claude Opus 5.5.
+- Implementation subagents use Claude Sonnet 5.5 via the Claude Code CLI, as explicitly requested by the user.
 - Pin the model per worker process; do not silently fall back to another model.
 - TEST/QA remain independent; changing implementation models does not change the coordinator or global defaults.
 

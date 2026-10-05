@@ -31,18 +31,19 @@ test('icon order, all statuses, tap/keyboard disclosure and fresh card reset', a
     await page.screenshot({ path: info.outputPath('synthetic-mobile.png'), fullPage: true });
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
-  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
+  const detail = page.getByRole('dialog', { name: 'カードの詳細', exact: true });
+  await expect(detail.locator('.printing-item')).toHaveCount(2);
+  await detail.getByRole('button', { name: /#2 · en/ }).click();
   await expect(icons.nth(0)).toHaveAttribute('data-status', 'unknown');
   await expect(icons.nth(2)).toHaveAttribute('data-status', 'legal');
   await expect(page.locator('.format-disclosure')).toBeHidden();
-  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(card.id);
-  await openRoute(page,'確定カード'); await page.getByLabel('印刷版', { exact: true }).selectOption(second.id);
+  await detail.getByRole('button', { name: /#1 · en/ }).click(); await expect(icons.nth(0)).toHaveAttribute('data-status', 'legal');
+  await detail.getByRole('button', { name: /#2 · en/ }).click();
   await expect(icons.nth(0)).toHaveAttribute('data-status', 'unknown');
 });
 test('JPY is primary with approximation, USD secondary and zero retained', async ({ page }) => {
   await open(page);
-  await expect(page.locator('.price')).toHaveText('概算 ￥0');
+  await expect(page.locator('.price')).toHaveText('参考価格 ￥0');
   await expect(page.locator('.usd')).toHaveText('$0.00 USD');
   expect(await page.locator('.price-box').evaluate(box => [...box.children].findIndex(node => node.classList.contains('price')) < [...box.children].findIndex(node => node.classList.contains('usd')))).toBe(true);
   const primary = await page.locator('.price').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
@@ -53,10 +54,10 @@ test('late FX preserves badge disclosure, focused control, input and scroll', as
   let release!: () => void; const pending = new Promise<void>(resolve => { release = resolve; });
   await page.route('https://api.frankfurter.dev/**', async route => { await pending; await route.fulfill({ json: { date: '2026-10-02', base: 'USD', quote: 'JPY', rate: 150 } }); });
   await open(page); await expect(page.locator('.usd')).toHaveText('$0.00 USD');
-  await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
+  await expect(page.locator('.printing-item')).toHaveCount(2);
   const badge = page.locator('[data-format="vintage"]'); await badge.click();
   await page.evaluate(() => scrollTo(0, 0)); release();
-  await expect(page.locator('.price')).toHaveText('概算 ￥0');
+  await expect(page.locator('.price')).toHaveText('参考価格 ￥0');
   await expect(badge).toBeFocused(); await expect(badge).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('.format-disclosure')).toContainText('1枚まで');
   expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -75,8 +76,8 @@ for (const width of [320, 390, 1280]) {
     // Geometry/keyboard test starts once provider hydration is finished.
     // Late-update behavior is exercised separately; native Space may cancel
     // if the result is detached by a card response between keydown and keyup.
-    await expect(page.locator('.result .price')).toHaveText('概算 ￥0');
-    await expect(page.getByLabel('印刷版', { exact: true }).locator('option')).toHaveCount(2);
+    await expect(page.locator('.price')).toHaveText('参考価格 ￥0');
+    await expect(page.locator('.printing-item')).toHaveCount(2);
     const badges = page.locator('.format-icons button');
     await expect(badges.locator('.format-badge')).toHaveText(['スタン', 'パイオニア', 'モダン', 'レガシー', 'ヴィンテ', '統率者', 'パウパー']);
     const geometry = await badges.evaluateAll(nodes => nodes.map(node => {
@@ -89,16 +90,16 @@ for (const width of [320, 390, 1280]) {
     expect(geometry.every(box => box.radius > 0 && box.radius < box.height / 2 && box.fits)).toBe(true);
     expect(geometry[0]!.color).not.toBe(geometry[1]!.color);
     expect(geometry[0]!.background).not.toBe(geometry[1]!.background);
-    expect(await page.locator('.drawer-body').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    expect(await page.locator('.detail-sheet-body').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const restricted = badges.nth(4);
     await restricted.focus();
-    const scroll = await page.locator('.drawer-body').evaluate(node => node.scrollTop);
+    const scroll = await page.locator('.detail-sheet-body').evaluate(node => node.scrollTop);
     await page.keyboard.press('Enter');
     await expect(restricted).toBeFocused();
     await expect(restricted).toHaveAccessibleName(/制限付き使用可.*1枚まで/);
     await expect(page.locator('.format-disclosure')).toContainText('1枚まで');
-    expect(await page.locator('.drawer-body').evaluate(node => node.scrollTop)).toBe(scroll);
+    expect(await page.locator('.detail-sheet-body').evaluate(node => node.scrollTop)).toBe(scroll);
     await page.keyboard.press('Space');
     await expect(restricted).toBeFocused();
     await expect(page.locator('.format-disclosure')).toBeHidden();
@@ -150,10 +151,10 @@ for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
     await expect(badges).toHaveCount(7);
     for (const badge of await badges.all()) await expect(badge).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole('button', { name: '履歴に保存', exact: true })).toBeInViewport({ ratio: 1 });
-    await expect(page.locator('.candidate-summary strong').first()).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.candidate-summary .candidate-name')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-set')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-summary img').first()).toBeInViewport({ ratio: 1 });
-    await expect(page.locator('.candidate-price .price')).toHaveText('概算 ￥0');
+    await expect(page.locator('.candidate-price .price')).toHaveText('参考価格 ￥0');
     await expect(page.locator('.candidate-price .price')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.candidate-price .usd')).toBeInViewport({ ratio: 1 });
     expect(await page.locator('.candidate-summary').evaluate(node => node.scrollTop)).toBe(0);
@@ -177,10 +178,10 @@ for (const dfc of [false, true]) for (const width of [320, 390, 440]) {
     await expect(page.getByRole('button', { name: '履歴に保存', exact: true })).toBeInViewport({ ratio: 1 });
     await page.keyboard.press('Space');
     await expect(page.locator('#candidate-format-disclosure')).toBeHidden();
-    await page.getByRole('button', { name: '詳細を見る', exact: true }).click();
+    await page.getByRole('button', { name: '画像から詳細を見る', exact: true }).click();
     if (dfc) {
       const faces = page.locator('.candidate-summary .reference-image button');
-      await expect(page.locator('.candidate-summary>div>p').first()).toHaveText(`英語：${front} // ${back}`);
+      await expect(page.locator('.candidate-summary>div>p').first()).toHaveText(`${front} // ${back}`);
       expect(await page.locator('.candidate-summary>div>p').first().evaluate(node => node.scrollHeight <= node.clientHeight)).toBe(true);
       await expect(faces).toHaveText([`表面：${front}`, `裏面：${back}`]);
       await faces.nth(1).click();
