@@ -1,5 +1,6 @@
 import './ui/style.css';
 import { el, button, label } from './ui/dom.js';
+import { closeIconButton } from './ui/close-button.js';
 import { Repository, FxProvider } from './data/repository.js';
 import type { Card, Face } from './data/cards.js';
 import { japaneseName, japaneseDisplay, japaneseFaceName } from './data/japanese-name.js';
@@ -131,7 +132,7 @@ const emptyCandidate=el('p','カードをかざすと情報が表示されます
 const candidateDetail=el('dialog','','candidate-detail-sheet');candidateDetail.id='candidate-detail-sheet';
 for(const control of [nameDetails,imageDetails]){control.setAttribute('aria-controls',candidateDetail.id);control.setAttribute('aria-haspopup','dialog');control.setAttribute('aria-expanded','false');}
 candidateDetail.setAttribute('aria-label','カードの詳細');candidateDetail.setAttribute('aria-modal','true');
-const detailHeader=el('div','','detail-sheet-header');const detailClose=button('×',()=>closeCandidateDetail());detailClose.setAttribute('aria-label','閉じる');detailHeader.append(el('h2','カードの詳細'),detailClose);
+const detailHeader=el('div','','detail-sheet-header');const detailClose=closeIconButton(()=>closeCandidateDetail());detailHeader.append(el('h2','カードの詳細'),detailClose);
 const detailBody=el('div','','detail-sheet-body');candidateDetail.append(detailHeader,detailBody);
 let detailTrigger:HTMLElement|null=null;
 let queuedVerified:{next:Suggestion;card:Card}|null=null;
@@ -170,7 +171,7 @@ detailHeader.addEventListener('pointercancel',()=>{swipe=null;});
 const navigation=el('nav','','panel-navigation'); navigation.setAttribute('aria-label','スキャナーの機能');
 const drawer=el('dialog','','utility-drawer'); drawer.setAttribute('aria-modal','true'); drawer.setAttribute('aria-label','スキャナーの補助画面');
 const drawerHeading=el('h2'); drawerHeading.id='drawer-heading';drawer.setAttribute('aria-labelledby',drawerHeading.id);
-const drawerBar=el('div','','drawer-bar');const drawerClose=button('補助画面を閉じる',()=>closeDrawer());drawerBar.append(drawerHeading,drawerClose);
+const drawerBar=el('div','','drawer-bar');const drawerClose=closeIconButton(()=>closeDrawer());drawerBar.append(drawerHeading,drawerClose);
 const drawerBody=el('div','','drawer-body');const historyRoute=el('div');historyRoute.append(el('p','確定したスキャンはまだありません。','empty-history'),historyView.node);
 const settingsRoute=el('div');settingsRoute.append(settingsPanel,information);
 searchPanel.append(fileLabel);

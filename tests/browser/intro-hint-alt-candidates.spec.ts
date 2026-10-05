@@ -91,7 +91,7 @@ test('他の候補 lists the one confirmed candidate and ends with a name-search
 });
 test('closing 他の候補 keeps the candidate; tapping the entry opens its detail; camera keeps running', async ({ page }) => {
   await installFlow(page); await startScan(page);
-  await page.getByRole('button', { name: '他の候補', exact: true }).click(); await page.getByRole('button', { name: '補助画面を閉じる', exact: true }).click();
+  await page.getByRole('button', { name: '他の候補', exact: true }).click(); await page.locator('.utility-drawer').getByRole('button', { name: '閉じる', exact: true }).click();
   await expect(page.locator('.tentative')).toContainText('Synthetic Alpha'); await expect(page.getByRole('button', { name: '停止', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: '他の候補', exact: true }).click(); await page.locator('.alternative-item').first().click();
   await expect(dialog(page)).toBeVisible(); await expect(dialog(page)).toContainText('Synthetic Alpha'); await expect(page.locator('.scan-history-row')).toHaveCount(0);

@@ -12,7 +12,7 @@ export async function openRoute(page:Page,name:'名前検索'|'履歴'|'設定')
 }
 export async function closeRoute(page:Page):Promise<void>{
  if(await page.locator('.candidate-detail-sheet').isVisible())await page.getByRole('button',{name:'閉じる',exact:true}).click();
- if(await page.locator('.utility-drawer').isVisible())await page.getByRole('button',{name:'補助画面を閉じる',exact:true}).click();
+ if(await page.locator('.utility-drawer').isVisible())await page.locator('.utility-drawer').getByRole('button',{name:'閉じる',exact:true}).click();
 }
 // "他の候補" lists candidates; the name-search fallback replaces the old direct dismissal.
 export async function searchFromCandidate(page:Page):Promise<void>{

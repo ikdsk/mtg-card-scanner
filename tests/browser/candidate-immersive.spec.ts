@@ -68,9 +68,9 @@ test('settings overlay is modal and leaves background geometry unchanged (SYNTHE
  const before=await geometry();const trigger=page.getByRole('button',{name:'情報・設定',exact:true});await trigger.click();
  await expect(page.getByRole('dialog',{name:'設定',exact:true})).toBeVisible();
  expect(await page.locator('.utility-drawer').evaluate(n=>n.matches(':modal'))).toBe(true);
- expect(await geometry()).toEqual(before);await expect(page.getByRole('button',{name:'補助画面を閉じる'})).toBeFocused();
+ expect(await geometry()).toEqual(before);await expect(page.locator('.utility-drawer').getByRole('button',{name:'閉じる'})).toBeFocused();
  expect(await page.locator('.candidate-dock').evaluate(n=>(n as HTMLElement).inert)).toBe(true);
- await page.locator('.tentative button').first().evaluate(n=>n.focus());await expect(page.getByRole('button',{name:'補助画面を閉じる'})).toBeFocused();
+ await page.locator('.tentative button').first().evaluate(n=>n.focus());await expect(page.locator('.utility-drawer').getByRole('button',{name:'閉じる'})).toBeFocused();
  await page.keyboard.press('Shift+Tab');await page.keyboard.press('Tab');
  expect(await page.locator('.utility-drawer').evaluate(n=>n.contains(document.activeElement))).toBe(true);
  await page.keyboard.press('Escape');await expect(page.locator('.utility-drawer')).toBeHidden();await expect(trigger).toBeFocused();
@@ -79,7 +79,7 @@ test('settings overlay is modal and leaves background geometry unchanged (SYNTHE
 
 test('overlay focus endpoints stay contained with no backdrop clickthrough (SYNTHETIC)',async({page},info)=>{
  await page.setViewportSize({width:1280,height:900});await setup(page);await page.getByRole('button',{name:'情報・設定',exact:true}).click();
- const close=page.getByRole('button',{name:'補助画面を閉じる',exact:true});
+ const close=page.locator('.utility-drawer').getByRole('button',{name:'閉じる',exact:true});
  await page.keyboard.press('Shift+Tab');
  expect(await page.locator('.utility-drawer').evaluate(n=>n.contains(document.activeElement))).toBe(true);
  await page.keyboard.press('Tab');await expect(close).toBeFocused();
@@ -100,7 +100,7 @@ for(const short of [false,true])test(`settings overlay 320px ${short?'short visu
  await page.getByText('認識設定（デバッグ）',{exact:true}).click();
  const input=page.getByLabel('四隅の表示期限 (ms)',{exact:true});await input.focus();await expect(input).toBeInViewport();
  const bounds=(await dialog.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);expect(bounds.y).toBeGreaterThanOrEqual(short?120:0);expect(bounds.y+bounds.height).toBeLessThanOrEqual(short?440:740);
- const close=page.getByRole('button',{name:'補助画面を閉じる',exact:true});const closeBounds=(await close.boundingBox())!;expect(closeBounds.y).toBeGreaterThanOrEqual(bounds.y);expect(closeBounds.y+closeBounds.height).toBeLessThanOrEqual(bounds.y+bounds.height);
+ const close=page.locator('.utility-drawer').getByRole('button',{name:'閉じる',exact:true});const closeBounds=(await close.boundingBox())!;expect(closeBounds.y).toBeGreaterThanOrEqual(bounds.y);expect(closeBounds.y+closeBounds.height).toBeLessThanOrEqual(bounds.y+bounds.height);
  const inputBounds=(await input.boundingBox())!;expect(inputBounds.y).toBeGreaterThanOrEqual(closeBounds.y+closeBounds.height);expect(inputBounds.y+inputBounds.height).toBeLessThanOrEqual(bounds.y+bounds.height);
  expect(await background()).toEqual(before);
  await page.locator('.drawer-body').evaluate(n=>n.scrollTop=n.scrollHeight);expect(await page.locator('.drawer-body').evaluate(n=>n.scrollTop)).toBeGreaterThan(0);
@@ -125,7 +125,7 @@ test('focused settings field stays reachable when keyboard visual viewport shrin
  const input=page.getByLabel('四隅の表示期限 (ms)',{exact:true});await input.focus();
  await page.evaluate(()=>{const viewport=Object.assign(new EventTarget(),{width:320,height:320,offsetTop:120,offsetLeft:0});Object.defineProperty(window,'visualViewport',{value:viewport,configurable:true});window.dispatchEvent(new Event('resize'));});
  await expect.poll(async()=>{const active=(await input.boundingBox())!,body=(await page.locator('.drawer-body').boundingBox())!;return active.y>=body.y&&active.y+active.height<=body.y+body.height;}).toBe(true);
- await expect(input).toBeFocused();await expect(page.getByRole('button',{name:'補助画面を閉じる'})).toBeInViewport();expect(await page.evaluate(()=>scrollY)).toBe(0);
+ await expect(input).toBeFocused();await expect(page.locator('.utility-drawer').getByRole('button',{name:'閉じる'})).toBeInViewport();expect(await page.evaluate(()=>scrollY)).toBe(0);
  await page.screenshot({path:info.outputPath(`settings-overlay-keyboard-focused.png`)});
  await closeRoute(page);await closeRoute(page);await page.getByRole('button',{name:'停止',exact:true}).click();
 });
