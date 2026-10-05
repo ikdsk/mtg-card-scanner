@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { alternativeCandidates } from '../../src/ui/alternative-candidates.js';
 import { card } from './fixtures.js';
-// SYNTHETIC candidates. The worker currently returns one best match only.
+// SYNTHETIC candidates. The worker returns the best match plus up to four runner-up identities.
 const suggestion = (cardId: string, score: number, version = 1) => ({ cardId, identity: `o-${cardId}`, version, faceIndex: 0, score });
 it('lists exactly the one confirmed candidate when the worker supplies no others', () => {
   const list = alternativeCandidates({ suggestion: suggestion('a', .7), card: { ...card, id: 'a' } });
@@ -21,4 +21,12 @@ it('returns an isolated snapshot', () => {
   const list = alternativeCandidates(source);
   list.pop();
   expect(alternativeCandidates(source)).toHaveLength(1);
+});
+it('drops another printing of an identity that is already listed and carries face index and identity', () => {
+  const list = alternativeCandidates(
+    { suggestion: { ...suggestion('a', .6), identity: 'oracle-x', faceIndex: 1 }, card: { ...card, id: 'a' } },
+    [{ suggestion: { ...suggestion('b', .8, 0), identity: 'oracle-x' }, card: { ...card, id: 'b' } }, { suggestion: { ...suggestion('c', .5, 0), identity: 'oracle-y', faceIndex: 1 }, card: { ...card, id: 'c' } }],
+  );
+  expect(list.map(x => x.cardId)).toEqual(['a', 'c']);
+  expect(list.map(x => [x.identity, x.faceIndex])).toEqual([['oracle-x', 1], ['oracle-y', 1]]);
 });

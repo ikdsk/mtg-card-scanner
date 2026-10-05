@@ -5,3 +5,7 @@ export function visiblePrintings(cards: readonly Card[], expanded: boolean): { s
   const shown = expanded ? [...cards] : cards.slice(0, PRINTINGS_INITIAL);
   return { shown, hidden: cards.length - shown.length };
 }
+// The list offers Japanese and English printings only; other languages are never shown.
+export function japaneseOrEnglish(cards: readonly Card[]): Card[] {
+  return cards.filter(card => card.lang === 'ja' || card.lang === 'en');
+}

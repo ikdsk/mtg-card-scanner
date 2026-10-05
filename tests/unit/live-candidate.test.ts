@@ -51,3 +51,11 @@ it('saving frozen A preserves newer B and suppresses A until sustained absence (
  live.observe({...c,cardPresent:false},300);live.observe({...c,cardPresent:false},600);live.observe({...c,cardPresent:false},900);
  expect(live.observe(c,1000)?.cardId).toBe(a.cardId);
 });
+it('adopt() installs a chosen alternative as a newer pending suggestion that camera frames of the dismissed card cannot replace', () => {
+  const live = new LiveCandidate(); const frameA = { cardId: 'a', oracleId: 'oracle-a', cardPresent: true, cornersValid: true, score: .7 };
+  const a = live.observe(frameA, 0)!; live.dismiss(a);
+  const b = live.adopt({ cardId: 'b', identity: 'oracle-b', faceIndex: 1, score: .4 });
+  expect(b).toMatchObject({ cardId: 'b', identity: 'oracle-b', faceIndex: 1, score: .4 }); expect(b.version).toBeGreaterThan(a.version);
+  expect(live.current(b)).toBe(true); expect(live.current(a)).toBe(false);
+  expect(live.observe(frameA, 100)).toEqual(b);
+});

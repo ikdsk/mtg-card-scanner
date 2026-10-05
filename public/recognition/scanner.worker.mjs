@@ -19,7 +19,8 @@
 
 // Modified for MTG Card Scanner (2026-10-04): pinned WASM runtime, verified
 // model downloads, optional local assets, bounded requests, identity margin,
-// and validated physical catalog face propagation (legacy/invalid defaults front).
+// validated physical catalog face propagation (legacy/invalid defaults front), and
+// top-N runner-up identities (`alternatives`) returned with the best match.
 // Original: HanClinto/CollectorVision @ 2a122d00d25c8d112a90e47bf235a021e0c53b0c
 // License: AGPL-3.0; see LICENSE-AGPL-3.0.txt and THIRD-PARTY-NOTICES.md.
 const localAssets = new URL(self.location.href).searchParams.has('local');
@@ -259,6 +260,9 @@ function normalizeEmbedding(embedding) {
   }
   return embedding;
 }
+
+// Alternatives returned next to the best match (top five identities in total).
+const TOP_ALTERNATIVES = 4;
 
 function chooseBetterMatch(current, candidate) {
   return candidate.score > current.score ? candidate : current;
@@ -963,7 +967,8 @@ class WorkerRuntime {
     const rows = this.catalogRows ?? this.manifest.catalog.rows;
     let bestScore = -Infinity;
     let bestIndex = -1;
-    const identityScores = new Map();
+    // Best row per identity (secondary id, else card id) so the top-N pass stays in this one loop.
+    const identityBest = new Map();
 
     for (let row = 0; row < rows; row += 1) {
       const offset = row * dims;
@@ -972,7 +977,9 @@ class WorkerRuntime {
         score += FLOAT16_LOOKUP[this.embeddings[offset + col]] * query[col];
       }
       const identity = this.secondaryIds?.[row] ?? this.cardIds[row];
-      identityScores.set(identity, Math.max(identityScores.get(identity) ?? -Infinity, score));
+      const known = identityBest.get(identity);
+      if (!known) identityBest.set(identity, { score, row });
+      else if (score > known.score) { known.score = score; known.row = row; }
       if (score > bestScore) {
         bestScore = score;
         bestIndex = row;
@@ -980,15 +987,24 @@ class WorkerRuntime {
     }
 
     const secondaryId = this.secondaryIds?.[bestIndex] ?? null;
-    const ranked = [...identityScores.values()].sort((a, b) => b - a);
-    const best = {
-      margin: ranked.length > 1 ? ranked[0] - ranked[1] : 1,
-      score: bestScore,
-      cardId: this.cardIds[bestIndex],
-      faceIndex: this.faceIndices?.[bestIndex] ?? 0,
-      cardName: this.cardNames?.[bestIndex] ?? null,
-      secondaryId,
+    const ranked = [...identityBest.entries()].sort((a, b) => b[1].score - a[1].score);
+    const bestIdentity = this.secondaryIds?.[bestIndex] ?? this.cardIds[bestIndex];
+    const rowInfo = (row, score) => ({
+      score,
+      cardId: this.cardIds[row],
+      faceIndex: this.faceIndices?.[row] ?? 0,
+      cardName: this.cardNames?.[row] ?? null,
+      secondaryId: this.secondaryIds?.[row] ?? null,
       secondaryIdField: this.secondaryIdField,
+    });
+    const best = {
+      margin: ranked.length > 1 ? ranked[0][1].score - ranked[1][1].score : 1,
+      ...rowInfo(bestIndex, bestScore),
+      // Next-best distinct identities (lightweight, no bitmaps); the best identity is excluded.
+      alternatives: ranked
+        .filter(([identity]) => identity !== bestIdentity)
+        .slice(0, TOP_ALTERNATIVES)
+        .map(([, entry]) => rowInfo(entry.row, entry.score)),
     };
     if (this.secondaryIdField && secondaryId !== null && secondaryId !== undefined) {
       best[this.secondaryIdField] = secondaryId;
@@ -1116,6 +1132,7 @@ async function processFrame(bitmap, captureRequested = false, includeDebugBitmap
     secondaryIdField: best.secondaryIdField,
     score: best.score,
     margin: best.margin,
+    alternatives: best.alternatives ?? [],
     orientation: best.orientation,
     rawCorners: runtime._lastRawCorners,
     detectorInput: runtime._lastDetectorInput,

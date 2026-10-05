@@ -10,7 +10,7 @@ import { FormatLegality } from './ui/format-legality.js';
 import { ReferenceImage, referenceFaces, safeScryfallUrl } from './ui/reference-image.js';
 import { ResultSession } from './ui/session.js';
 import { formatReferencePrice } from './domain/pricing.js';
-import { Recognizer } from './recognition/adapter.js';
+import { Recognizer, type RecognitionAlternative, type RecognitionResult } from './recognition/adapter.js';
 import { LiveCandidate, type Suggestion } from './recognition/live-candidate.js';
 import { defaults, bounds, validateSettings, type RecognitionSettings } from './recognition/settings.js';
 import { SetBadge } from './ui/set-badge.js';
@@ -18,7 +18,7 @@ import { CandidateMetadata } from './ui/candidate-metadata.js';
 import { DetectionOverlay } from './ui/detection-overlay.js';
 import { captureCameraFrame } from './ui/camera-geometry.js';
 import { PrintingsList } from './ui/printings-list.js';
-import { alternativeCandidates, type AlternativeCandidate } from './ui/alternative-candidates.js';
+import { alternativeCandidates, type AlternativeCandidate, type CandidateEntry } from './ui/alternative-candidates.js';
 
 const marks: { event: string; ms: number; detail?: unknown }[] = [];
 function mark(event: string, detail?: unknown): void { marks.push({ event, ms: performance.now(), detail }); if (marks.length > 300) marks.shift(); performance.clearMarks(event); performance.mark(event); }
@@ -175,11 +175,11 @@ const drawerBar=el('div','','drawer-bar');const drawerClose=closeIconButton(()=>
 const drawerBody=el('div','','drawer-body');const historyRoute=el('div');historyRoute.append(el('p','確定したスキャンはまだありません。','empty-history'),historyView.node);
 const settingsRoute=el('div');settingsRoute.append(settingsPanel,information);
 searchPanel.append(fileLabel);
-// 他の候補: frozen list of the candidates the user can choose between. The worker only
-// reports one best match, so the list holds that single confirmed candidate for now.
+// 他の候補: frozen list of the candidates the user can choose between (see openAlternatives).
 const alternativesRoute=el('div'); const alternativesList=el('ol','','alternative-list');
+const alternativesStatus=el('p','他の候補を確認中…','small muted');alternativesStatus.setAttribute('role','status');alternativesStatus.hidden=true;
 const alternativesSearch=button('見つからない場合は名前検索',()=>searchFromAlternatives());
-alternativesRoute.append(el('p','類似度の近い候補です。見つからない場合は名前で検索できます。','small muted'),alternativesList,alternativesSearch);
+alternativesRoute.append(el('p','類似度の近い候補です。見つからない場合は名前で検索できます。','small muted'),alternativesList,alternativesStatus,alternativesSearch);
 const routes={search:searchPanel,history:historyRoute,settings:settingsRoute,alternatives:alternativesRoute};
 const routeNames={search:'名前検索',history:'履歴',settings:'設定',alternatives:'他の候補'};
 let activeRoute:keyof typeof routes|null=null;
@@ -249,6 +249,8 @@ const snapshots = new CandidateMetadata((id:string,signal:AbortSignal)=>candidat
 const candidateJapaneseRepo=new Repository();
 const japaneseSnapshots=new CandidateMetadata((oracle:string,signal:AbortSignal)=>candidateJapaneseRepo.printings(oracle,signal));
 const candidateFx=new CandidateMetadata((_key:string,signal:AbortSignal)=>fx.latest(signal));
+// Own cache for 他の候補 entries so a newer live proposal cannot abort their requests.
+const alternativeSnapshots=new CandidateMetadata((id:string,signal:AbortSignal)=>candidateRepo.card(id,signal));
 const candidateSession=new ResultSession((id)=>snapshots.get(id),()=>candidateFx.get('USDJPY'),renderCandidatePrice);
 let loadingSuggestion: Suggestion | null=null;
 let suggestion: Suggestion | null=null; let suggestionCard: Card | null=null;
@@ -292,11 +294,20 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {if(holdLive())return;queuedVerified=null;loadingSuggestion=null;viewRevision++;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;shown=null;shownJapanese=null;printings=[];staticView=false;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrintings.clear();tentativeActions.hidden=false;tentativeScore.hidden=false;tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと情報が表示されます。保存は任意です。';showIntro(!active);}
+function hideSuggestion():void {if(holdLive())return;queuedVerified=null;loadingSuggestion=null;viewRevision++;tentativeSet.clear();snapshots.cancelExcept(null);alternativeSnapshots.cancelExcept(null);liveAlternatives=null;japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;shown=null;shownJapanese=null;printings=[];staticView=false;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrintings.clear();tentativeActions.hidden=false;tentativeScore.hidden=false;tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと情報が表示されます。保存は任意です。';showIntro(!active);}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
  for(const [key,input] of settingsInputs)input.value=String(settings[key]);settingsError.textContent='設定を適用しました。新しい観測から使用します。';diagnostics.textContent='類似度 — · margin —';
+}
+// A candidate is shown only once Scryfall returned exactly that card with a real name.
+function verifiedCard(card:Card,id:string):boolean {const name=card.name.trim();return card.id===id&&!!name&&name!==card.id&&name!==card.oracle_id;}
+// The newest frame's runner-up identities for the live candidate; metadata is fetched only on demand.
+let liveAlternatives:{version:number;items:RecognitionAlternative[]}|null=null;
+function observeCandidate(candidate:RecognitionResult):Suggestion|null {
+ const next=tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now());
+ if(next&&next.cardId===candidate.cardId)liveAlternatives={version:next.version,items:candidate.alternatives};
+ return next;
 }
 function presentSuggestion(next: Suggestion | null):void {
  if(!next){if(savedVersion!==suggestion?.version)hideSuggestion();return;}
@@ -306,7 +317,7 @@ function presentSuggestion(next: Suggestion | null):void {
  if(!suggestion){emptyCandidate.hidden=false;emptyCandidate.textContent='カード情報を確認中…';}
  void snapshots.get(next.cardId).then(card=>{
   if(loadingSuggestion?.version!==next.version || !tentative.current(next))return;
-  if(card.id!==next.cardId || !card.name.trim() || card.name.trim()===card.id || card.name.trim()===card.oracle_id){if(!suggestion)emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
+  if(!verifiedCard(card,next.cardId)){if(!suggestion)emptyCandidate.textContent='カード情報を確認できません。名前検索を利用してください。';return;}
   if(holdLive()){queuedVerified={next,card};loadingSuggestion=null;return;}
   commitSuggestion(next,card);
  }).catch(()=>{if(loadingSuggestion?.version===next.version&&!suggestion&&tentative.current(next)){emptyCandidate.textContent='カード情報を取得できません。名前検索を利用してください。';}});
@@ -377,20 +388,37 @@ function renderCandidatePrice():void {
  nodes.push(el('p',value.fx?`Frankfurter / ECB · 1 USD = ${value.fx.jpyPerUsd} JPY · 最新公表日 ${value.fx.asOf}`:value.fxError?'為替を取得できません。USDのみ表示します。':'為替を確認中（取得できなければUSDのみ）','small muted'));
  tentativePrice.replaceChildren(...nodes.filter((node,index)=>index<2||node.classList.contains('usd')));tentativeSources.replaceChildren(...nodes.filter((node,index)=>index>=2&&!node.classList.contains('usd')));
 }
-// 他の候補: freeze the current candidate into a list. TODO: when the worker returns
-// top-N candidates (scanner.worker.mjs search() currently returns the single best match),
-// pass the verified extra candidates to alternativeCandidates() and render several entries.
+// 他の候補: the list is frozen when opened. The current candidate is listed at once; the
+// worker's runner-up identities are fetched from Scryfall only now (one request each, on
+// the separate alternative cache) and appear once verified. Unverified ones are never shown.
 let alternatives:AlternativeCandidate[]=[];let alternativesFor:Suggestion|null=null;
+let alternativeExtras:CandidateEntry[]=[];let alternativesPending=0;let alternativesOpen=0;
 function openAlternatives():void {
  const captured=activationSnapshot(dismiss);if(!captured||suggestion?.version!==captured.version||!suggestionCard||staticView)return;
- alternativesFor=captured;alternatives=alternativeCandidates({suggestion:captured,card:suggestionCard});
+ const currentCard=suggestionCard;const current:CandidateEntry={suggestion:captured,card:currentCard};
+ const opened=++alternativesOpen;alternativesFor=captured;alternativeExtras=[];alternatives=alternativeCandidates(current);
+ const items=liveAlternatives?.version===captured.version?liveAlternatives.items:[];
+ const wanted=items.filter(item=>item.cardId!==captured.cardId&&(item.secondaryId??item.cardId)!==captured.identity);
+ alternativesPending=wanted.length;
  renderAlternatives();showDrawer('alternatives');
+ for(const item of wanted) {
+  const identity=item.secondaryId??item.cardId;
+  void alternativeSnapshots.get(item.cardId).then(card=>{
+   if(opened!==alternativesOpen||alternativesFor?.version!==captured.version||!verifiedCard(card,item.cardId))return;
+   alternativeExtras.push({suggestion:{cardId:item.cardId,identity,version:0,faceIndex:item.faceIndex,score:item.score},card});
+   alternatives=alternativeCandidates(current,alternativeExtras);
+  }).catch(()=>{}).finally(()=>{
+   if(opened!==alternativesOpen||alternativesFor?.version!==captured.version)return;
+   alternativesPending--;renderAlternatives();
+  });
+ }
 }
 function recognizedJapanese():Card|null {return shown?.card.id===suggestionCard?.id?shownJapanese:japaneseDisplay(suggestionCard!,printings);}
 function renderAlternatives():void {
+ alternativesStatus.hidden=alternativesPending<=0;
  alternativesList.replaceChildren(...alternatives.map(entry=>{
   const item=el('li');const control=button('',()=>chooseAlternative(entry),'alternative-item');
-  const japanese=entry.cardId===suggestionCard?.id?recognizedJapanese():null;
+  const japanese=entry.cardId===suggestionCard?.id?recognizedJapanese():entry.card;
   const url=safeScryfallUrl(entry.card.image_uris?.small,'image')??referenceFaces(entry.card)[0]?.url;
   if(url){const image=el('img');image.alt='';image.width=48;image.height=67;image.decoding='async';image.referrerPolicy='no-referrer';image.onerror=()=>image.remove();image.src=url;control.append(image);}
   const text=el('span','','alternative-text');text.append(el('strong',(japanese?japaneseName(japanese):null)??entry.card.name),el('span',entry.card.name,'small muted'),el('span',`${entry.card.set_name} (${entry.card.set.toUpperCase()}) #${entry.card.collector_number} · ${entry.card.lang}`,'small'),el('span',`類似度 ${entry.score.toFixed(3)}${entry.current?' · 現在の候補':''}`,'small muted'));
@@ -398,15 +426,20 @@ function renderAlternatives():void {
  }));
 }
 function chooseAlternative(entry:AlternativeCandidate):void {
- // TODO(top-N): a non-current entry must be verified and swapped in as the live suggestion.
- // Today the only entry is the current candidate, so choosing it just opens its detail.
+ const captured=alternativesFor;
  closeDrawer(true);
- if(entry.current)openCandidateDetail();
+ if(entry.current){openCandidateDetail();return;}
+ if(!captured||suggestion?.version!==captured.version)return;
+ // The reader's choice replaces the live candidate. The old card is dismissed so its
+ // camera frames cannot swap it back; a different card or an absence re-arms it.
+ queuedVerified=null;loadingSuggestion=null;tentative.dismiss(captured);
+ const next=tentative.adopt({cardId:entry.cardId,identity:entry.identity,faceIndex:entry.faceIndex,score:entry.score});
+ commitSuggestion(next,entry.card);openCandidateDetail();
 }
 function searchFromAlternatives():void {
  const captured=alternativesFor;if(!captured)return;
  if(suggestion?.version===captured.version){tentative.dismiss(captured);tentative.reset();}
- activeRoute=null;alternatives=[];alternativesFor=null;alternativesList.replaceChildren();
+ activeRoute=null;alternatives=[];alternativeExtras=[];alternativesFor=null;alternativesList.replaceChildren();
  const japanese=recognizedJapanese();const name=(japanese?japaneseName(japanese):null)??suggestionCard?.name??'';
  closeCandidateDetail();hideSuggestion();query.value=name;showDrawer('search');query.focus({preventScroll:true});
 }
@@ -503,7 +536,7 @@ async function loop(generation: number): Promise<void> {
     diagnostics.textContent=`類似度 ${Number.isFinite(candidate.score) ? candidate.score!.toFixed(3) : '—'} · margin ${Number.isFinite(candidate.margin) ? candidate.margin.toFixed(3) : '—'}`;
     overlay.update(candidate, capturedAt);
     cameraStatus.textContent = 'カード全体を画面内へ · 情報を表示します。保存は任意です';
-    presentSuggestion(tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now()));
+    presentSuggestion(observeCandidate(candidate));
   } catch (error) {
     if (generation === scanGeneration) { modelReady = false; modelRetry.hidden = false; stopCamera(errorText(error, '認識できません。名前検索も利用できます。')); }
   } finally {
@@ -529,7 +562,7 @@ async function scanFile(image: File): Promise<void> {
     const revision=evidenceRevision; mark('file-frame-start'); const candidate = await recognizer.frame(await createImageBitmap(canvas)); mark('file-frame-result', candidate);
     if (generation !== scanGeneration || revision!==evidenceRevision) return;
     diagnostics.textContent=`類似度 ${Number.isFinite(candidate.score)?candidate.score!.toFixed(3):'—'} · margin ${Number.isFinite(candidate.margin)?candidate.margin.toFixed(3):'—'}`;
-    const proposal = tentative.observe({...candidate,oracleId:candidate.scryfallOracleId},performance.now());
+    const proposal = observeCandidate(candidate);
     presentSuggestion(proposal);
     cameraStatus.textContent = proposal ? '画像の処理が完了しました。情報を確認できます。保存は任意です。' : '候補を絞れませんでした。四隅・背景・反射を確認するか、名前検索で探してください。';
   } catch (error) { if (generation === scanGeneration) cameraStatus.textContent = errorText(error, '画像を認識できません。'); }

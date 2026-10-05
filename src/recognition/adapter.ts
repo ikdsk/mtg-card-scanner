@@ -1,6 +1,19 @@
 import { manifest } from './manifest.js';
 import type { Candidate } from './gate.js';
-export type RecognitionResult = Candidate & { margin: number; corners?: unknown; scryfallOracleId?: string; timing?: Record<string, number> };
+// Next-best distinct Oracle identities from the worker's search, lightweight data only.
+export type RecognitionAlternative = { cardId: string; score: number; faceIndex: number; cardName: string | null; secondaryId: string | null; secondaryIdField: string | null };
+export type RecognitionResult = Candidate & { margin: number; alternatives: RecognitionAlternative[]; corners?: unknown; scryfallOracleId?: string; timing?: Record<string, number> };
+export function normalizeAlternatives(value: unknown): RecognitionAlternative[] {
+  if (!Array.isArray(value)) return [];
+  const out: RecognitionAlternative[] = [];
+  for (const item of value as unknown[]) {
+    if (typeof item !== 'object' || item === null) continue;
+    const x = item as Record<string, unknown>;
+    if (typeof x.cardId !== 'string' || !x.cardId || typeof x.score !== 'number' || !Number.isFinite(x.score)) continue;
+    out.push({ cardId: x.cardId, score: x.score, faceIndex: x.faceIndex === 1 ? 1 : 0, cardName: typeof x.cardName === 'string' ? x.cardName : null, secondaryId: typeof x.secondaryId === 'string' ? x.secondaryId : null, secondaryIdField: typeof x.secondaryIdField === 'string' ? x.secondaryIdField : null });
+  }
+  return out;
+}
 export class Recognizer {
   private worker: Worker | null = null;
   private ready: Promise<void> | null = null;
@@ -30,7 +43,7 @@ export class Recognizer {
           this.progress(`端末内認識の準備完了 · WASM · 辞書 v${data.catalogVersion}${data.catalogFallback ? '（更新失敗のため互換キャッシュを使用）' : ''}`); resolve();
         } else if (data.type === 'result') {
           if (this.timer) clearTimeout(this.timer); this.timer = null;
-          this.waiting?.resolve(data as RecognitionResult); this.waiting = null;
+          this.waiting?.resolve({ ...data, alternatives: normalizeAlternatives(data.alternatives) } as RecognitionResult); this.waiting = null;
         } else if (data.type === 'error') fail(new Error(String(data.message)));
       };
       w.postMessage({ type: 'init', manifest, catalogMode: 'v2', enableWebGpu: false, rotationInvariant: true });

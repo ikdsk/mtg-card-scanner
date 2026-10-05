@@ -1,7 +1,7 @@
 import type { Card } from '../data/cards.js';
 import { el, button } from './dom.js';
 import { referenceFaces, safeScryfallUrl } from './reference-image.js';
-import { visiblePrintings } from './printings-list-model.js';
+import { japaneseOrEnglish, visiblePrintings } from './printings-list-model.js';
 // Other printings of the shown Oracle card. Tapping one asks the owner to show it;
 // the list never fetches. Selection state updates in place so focus survives.
 export class PrintingsList {
@@ -15,7 +15,7 @@ export class PrintingsList {
   fail(): void { this.cards = []; this.node.hidden = false; this.node.replaceChildren(el('h3', '他の印刷版'), el('p', '版の一覧を取得できません。', 'small muted')); }
   update(cards: readonly Card[], currentId: string): void {
     if (cards[0]?.oracle_id !== this.cards[0]?.oracle_id) this.expanded = false;
-    this.cards = [...cards]; this.currentId = currentId; this.node.hidden = false; this.render();
+    this.cards = japaneseOrEnglish(cards); this.currentId = currentId; this.node.hidden = false; this.render();
   }
   setCurrent(id: string): void {
     this.currentId = id;
@@ -38,7 +38,7 @@ export class PrintingsList {
       item.append(control); list.append(item);
     }
     const nodes: HTMLElement[] = [el('h3', '他の印刷版'), list];
-    if (this.cards.length <= 1) nodes.splice(1, 0, el('p', '他の印刷版はありません。', 'small muted'));
+    if (!this.cards.some(card => card.id !== this.currentId)) nodes.splice(1, 0, el('p', '他の印刷版はありません。', 'small muted'));
     if (hidden > 0) nodes.push(button('もっと見る', () => {
       const first = shown.length; this.expanded = true; this.render();
       this.node.querySelectorAll<HTMLButtonElement>('.printing-item')[first]?.focus({ preventScroll: true });

@@ -21,6 +21,8 @@ export class LiveCandidate {
   else this.pending={cardId:c.cardId,identity,faceIndex,score:c.score,version:++this.version};
   return this.pending;
  }
+ // The reader chose another candidate from 他の候補: it becomes the newer pending suggestion.
+ adopt(c: Pick<Suggestion,'cardId'|'identity'|'faceIndex'|'score'>): Suggestion { return this.pending={cardId:c.cardId,identity:c.identity,faceIndex:c.faceIndex===1?1:0,score:c.score,version:++this.version}; }
  current(snapshot: Suggestion): boolean { return this.pending?.version===snapshot.version && this.pending.cardId===snapshot.cardId; }
  dismiss(snapshot: Suggestion): void { this.dismissed=snapshot.identity; if(this.current(snapshot)) this.pending=null; }
  accepted(identity: string, preserveNewer = false): void { this.suppressed.clear();this.suppressed.add(identity); if(!preserveNewer||this.pending?.identity===identity)this.pending=null; }
