@@ -1,0 +1,233 @@
+[
+  {
+    "id": "762a4b35-0a1a-419c-9f62-fb2e6f24891e",
+    "oracle_id": "edd531b9-f615-4399-8c8c-1c5e18c4acbf",
+    "name": "Delver of Secrets // Insectile Aberration",
+    "lang": "ja",
+    "set": "mid",
+    "set_name": "Innistrad: Midnight Hunt",
+    "collector_number": "47",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Delver of Secrets",
+        "printed_name": "Delver of Secrets",
+        "mana_cost": "{U}",
+        "type_line": "Creature — Human Wizard",
+        "printed_type_line": "クリーチャー — 人間・ウィザード",
+        "oracle_text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform this creature.",
+        "printed_text": "あなたのアップキープの開始時に、あなたのライブラリーの一番上にあるカード１枚を見る。あなたはそのカードを公開してもよい。これによりインスタントやソーサリーであるカードが公開されたなら、秘密を掘り下げる者を変身させる。",
+        "colors": [
+          "U"
+        ],
+        "power": "1",
+        "toughness": "1",
+        "flavor_text": "「私の仮説が正しければ……」",
+        "artist": "Matt Stewart",
+        "artist_id": "20871267-2d8a-41d5-b03a-be3d557c5734",
+        "illustration_id": "9b572479-d64a-4d61-bd09-2c9a95138ddb",
+        "image_uris": {
+          "small": "https://cards.scryfall.io/small/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "normal": "https://cards.scryfall.io/normal/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "large": "https://cards.scryfall.io/large/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "png": "https://cards.scryfall.io/png/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.png?1782872683",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "border_crop": "https://cards.scryfall.io/border_crop/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "thumb": "https://cards.scryfall.io/thumb/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "grid": "https://cards.scryfall.io/grid/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "display": "https://cards.scryfall.io/display/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "art": "https://cards.scryfall.io/art/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "crop": "https://cards.scryfall.io/crop/front/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683"
+        }
+      },
+      {
+        "object": "card_face",
+        "name": "Insectile Aberration",
+        "printed_name": "Insectile Aberration",
+        "mana_cost": "",
+        "type_line": "Creature — Human Insect",
+        "printed_type_line": "クリーチャー — 人間・昆虫",
+        "oracle_text": "Flying",
+        "printed_text": "飛行",
+        "colors": [
+          "U"
+        ],
+        "color_indicator": [
+          "U"
+        ],
+        "power": "3",
+        "toughness": "2",
+        "flavor_text": "「おお！なるほど！聞こえるぞ、空を照らす光の美しい唄だ。月に昇り、それの意味を確かめなければ！」",
+        "artist": "Matt Stewart",
+        "artist_id": "20871267-2d8a-41d5-b03a-be3d557c5734",
+        "illustration_id": "83f0906b-d0e5-4725-ab5b-e33ed3387123",
+        "image_uris": {
+          "small": "https://cards.scryfall.io/small/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "normal": "https://cards.scryfall.io/normal/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "large": "https://cards.scryfall.io/large/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "png": "https://cards.scryfall.io/png/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.png?1782872683",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "border_crop": "https://cards.scryfall.io/border_crop/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.jpg?1782872683",
+          "thumb": "https://cards.scryfall.io/thumb/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "grid": "https://cards.scryfall.io/grid/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "display": "https://cards.scryfall.io/display/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "art": "https://cards.scryfall.io/art/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683",
+          "crop": "https://cards.scryfall.io/crop/back/7/6/762a4b35-0a1a-419c-9f62-fb2e6f24891e.webp?1782872683"
+        }
+      }
+    ],
+    "scryfall_uri": "https://scryfall.com/card/mid/47/ja/delver-of-secrets-insectile-aberration-(delver-of-secrets-insectile-aberration)?utm_source=api"
+  },
+  {
+    "id": "c0cea2af-422d-4718-913c-56a1d1c33ba9",
+    "oracle_id": "edd531b9-f615-4399-8c8c-1c5e18c4acbf",
+    "name": "Delver of Secrets // Insectile Aberration",
+    "lang": "ja",
+    "set": "isd",
+    "set_name": "Innistrad",
+    "collector_number": "51",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Delver of Secrets",
+        "printed_name": "秘密を掘り下げる者",
+        "mana_cost": "{U}",
+        "type_line": "Creature — Human Wizard",
+        "printed_type_line": "クリーチャー — 人間・ウィザード",
+        "oracle_text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform this creature.",
+        "printed_text": "あなたのアップキープの開始時に、あなたのライブラリーの一番上のカードを見る。 あなたはそのカードを公開してもよい。 これによりインスタント・カードかソーサリー・カードが公開された場合、秘密を掘り下げる者を変身させる。",
+        "colors": [
+          "U"
+        ],
+        "power": "1",
+        "toughness": "1",
+        "artist": "Nils Hamm",
+        "artist_id": "c540d1fc-1500-457f-93cf-d6069ee66546",
+        "illustration_id": "1c2fee9b-89ea-4ab1-a751-451c3cd65a88",
+        "image_uris": {
+          "small": "https://cards.scryfall.io/small/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "normal": "https://cards.scryfall.io/normal/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "large": "https://cards.scryfall.io/large/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "png": "https://cards.scryfall.io/png/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.png?1782988183",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "border_crop": "https://cards.scryfall.io/border_crop/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "thumb": "https://cards.scryfall.io/thumb/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "grid": "https://cards.scryfall.io/grid/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "display": "https://cards.scryfall.io/display/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "art": "https://cards.scryfall.io/art/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "crop": "https://cards.scryfall.io/crop/front/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183"
+        }
+      },
+      {
+        "object": "card_face",
+        "name": "Insectile Aberration",
+        "printed_name": "昆虫の逸脱者",
+        "mana_cost": "",
+        "type_line": "Creature — Human Insect",
+        "printed_type_line": "クリーチャー ― - 人間・昆虫",
+        "oracle_text": "Flying",
+        "printed_text": "飛行",
+        "colors": [
+          "U"
+        ],
+        "color_indicator": [
+          "U"
+        ],
+        "power": "3",
+        "toughness": "2",
+        "flavor_text": "「残念ながら、私の実験動物はすべて死ぬか逃げるかしてしまった。ならば私が最後の実験台となろう。 恐れは無い。 重大な夜となるだろう。」\n――研究記録、最後の書き込み",
+        "artist": "Nils Hamm",
+        "artist_id": "c540d1fc-1500-457f-93cf-d6069ee66546",
+        "illustration_id": "c2b5f731-771b-4949-90f3-0ad40d676100",
+        "image_uris": {
+          "small": "https://cards.scryfall.io/small/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "normal": "https://cards.scryfall.io/normal/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "large": "https://cards.scryfall.io/large/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "png": "https://cards.scryfall.io/png/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.png?1782988183",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "border_crop": "https://cards.scryfall.io/border_crop/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.jpg?1782988183",
+          "thumb": "https://cards.scryfall.io/thumb/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "grid": "https://cards.scryfall.io/grid/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "display": "https://cards.scryfall.io/display/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "art": "https://cards.scryfall.io/art/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183",
+          "crop": "https://cards.scryfall.io/crop/back/c/0/c0cea2af-422d-4718-913c-56a1d1c33ba9.webp?1782988183"
+        }
+      }
+    ],
+    "scryfall_uri": "https://scryfall.com/card/isd/51/ja/%E7%A7%98%E5%AF%86%E3%82%92%E6%8E%98%E3%82%8A%E4%B8%8B%E3%81%92%E3%82%8B%E8%80%85-%E6%98%86%E8%99%AB%E3%81%AE%E9%80%B8%E8%84%B1%E8%80%85-(delver-of-secrets-insectile-aberration)?utm_source=api"
+  }
+]

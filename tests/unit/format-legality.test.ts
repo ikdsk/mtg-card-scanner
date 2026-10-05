@@ -9,3 +9,7 @@ it('keeps the seven paper formats in order and never infers missing legality', (
   expect(formatStatuses(undefined).every(row => row.status === 'unknown')).toBe(true);
   expect(formatStatuses({ modern: 'legal' })[0]!.status).toBe('unknown');
 });
+
+it('uses the exact compact Japanese badge labels in order', () => {
+  expect(formatStatuses().map(row => row.badge)).toEqual(['スタン', 'パイオニア', 'モダン', 'レガシー', 'ヴィンテ', '統率者', 'パウパー']);
+});

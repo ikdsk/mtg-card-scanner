@@ -27,14 +27,18 @@ export class ReferenceImage {
   private identity = '';
   private signature = '';
   private face = 0;
+  private recognizedFace: number | undefined;
   private epoch = 0;
-  clear(): void { this.identity = ''; this.signature = ''; this.face = 0; this.epoch++; this.node.replaceChildren(); }
-  update(card: Card): void {
+  clear(): void { this.identity = ''; this.signature = ''; this.face = 0; this.recognizedFace = undefined; this.epoch++; this.node.replaceChildren(); }
+  update(card: Card, faceIndex?: number): void {
     const identity = `${card.id}:${card.lang}`;
     const faces = referenceFaces(card);
     const signature = JSON.stringify([identity, faces, safeScryfallUrl(card.scryfall_uri, 'link')]);
-    if (signature === this.signature) return;
-    if (identity !== this.identity) this.face = 0;
+    const recognized=faceIndex === 1 && faces.length > 1 ? 1 : 0;
+    const faceChanged=faceIndex !== undefined && recognized !== this.recognizedFace;
+    if (signature === this.signature && !faceChanged) return;
+    if (identity !== this.identity) { this.face = 0; this.recognizedFace = undefined; }
+    if (faceIndex !== undefined && (faceChanged || identity !== this.identity)) { this.face=recognized; this.recognizedFace=recognized; }
     if (this.face >= faces.length) this.face = 0;
     this.identity = identity; this.signature = signature;
     this.draw(card, faces);

@@ -81,38 +81,30 @@ The original implementation report preserves historical environment limitations.
   One reserved frame even during model load; dispose rejects outstanding work.
   CPU/WASM one thread only. No WebGPU option. Camera preview starts independently
   of model readiness. Results from old camera/file generations are discarded.
-- Candidate gate: two valid same-ID results, cosine≥0.75 and distinct-oracle
-  margin≥0.025. These are **uncalibrated conservative trial thresholds**, not
-  an accuracy or probability claim. File-input repeats are deterministic repeats,
-  not independent image samples. Detection uses four corners and perspective
-  warp. Camera input is the complete delivered video frame, uniformly resized
-  to a maximum edge of 1024 without upscaling or source cropping (integer pixel
-  rounding allowed). Preview uses the delivered aspect ratio and contain so its
-  visible image agrees with inference input. Native resizeMode:none is an ideal
-  preference, not a guarantee about physical sensor modes on every browser.
-- Continuous camera lifecycle (explicit user supersession, 2026-10-04): acceptance
-  does not stop the camera or bounded inference loop. File input remains a finite
-  two-repeat scan. Camera permission requires an explicit start action. Stop,
-  errors, hidden document and pagehide release tracks; pagehide also terminates
-  the worker. Resume requires explicit start. History inspection and name search
-  stop the camera before displaying a selected result.
-- Camera acceptance still requires the existing two same-printing-ID valid frames,
-  cosine≥0.75 and distinct-oracle margin≥0.025. A separate event guard groups the
-  accepted printing by the real worker's `scryfallOracleId` (printing ID fallback
-  if unavailable), so printing jitter cannot refetch or undo a physical override.
-  A different stable Oracle card creates a new event. The same card rearms only
-  after at least three consecutive `cardPresent:false` completed detector results
-  spanning ≥600ms. Ambiguous/low-score/card-present invalid-corner results interrupt
-  absence and never rearm. This is a conservative trial policy, not calibrated
-  removal accuracy; physical swaps without reported absence may be suppressed.
-- Every camera acceptance reserves a tab-only history event immediately, bounded
-  to the newest 100 events. Until verified provider metadata arrives the row shows
-  only the actual candidate ID and lookup status. Superseded/failed metadata stays
-  labeled unavailable, never fabricated. Each event resets selection generation,
-  invalidates old metadata/printing-list/price/FX responses, and updates the latest
-  result asynchronously while capture continues. Manual physical selection updates
-  that event; only a genuinely new accepted event can replace it. Live acceptance
-  never reveals/scrolls the result; deliberate history/file/manual selections may.
+- Candidate-first recognition (explicit user supersession, 2026-10-04): one valid
+  card-present, corners-valid, finite cosine≥0.50 observation proposes a physical
+  printing. No score/margin/streak automatically accepts a camera or file match.
+  File input runs one bounded inference, then waits for explicit confirmation.
+  Similarity is uncalibrated cosine, not probability. Detection uses four corners
+  and perspective warp. Camera input remains the complete delivered frame,
+  uniformly resized to maximum edge 1024 without upscaling/cropping. Preview
+  retains delivered aspect ratio/contain; resizeMode:none remains an ideal request.
+- Continuous camera lifecycle: `これです` alone records recognized metadata in
+  history/result, without stopping capture or the one-inflight inference loop.
+  Candidate updates never replace confirmed/manual selections. Explicit camera
+  start is required; stop/error/hidden document/pagehide release tracks, pagehide
+  terminates worker. Resume requires explicit start. History/name search stop
+  capture before showing the selected result. New camera/file sessions reset
+  scan context. Manual name-search semantics are unchanged and do not record scans.
+- Confirmation pins the displayed immutable proposal version/printing ID, verified
+  Repository card and default supported finish (nonfoil preferred). Pointer and
+  held-key interactions cannot accept a replacement identity. Each confirmation
+  creates exactly one tab-only event (newest 100 retained); no pending/unconfirmed
+  history row. Manual physical overrides update that confirmed event. Confirmed
+  stationary Oracle identity (printing ID fallback) is suppressed until three
+  consecutive cardPresent:false observations spanning≥600ms, a different confirmed
+  card, or explicit scan-context reset. Low score/invalid corners interrupt absence.
+  No result reveal, focus request or scroll is triggered by proposals/confirmation.
 - Green detection overlay uses only real normalized full-frame worker corners,
   independent of identity acceptance. Validate exactly four finite [0,1] pairs,
   area≥0.01, pair distance²≥0.0004 and strictly convex order. No clamping or invented
@@ -131,64 +123,64 @@ Public use is not authorized by this executable contract. AGPL/source-offer,
 model/data/image licensing, independent combined-candidate QA and real-device
 performance gates remain separate release requirements.
 
-## Live tentative confirmation and optional recognition settings (2026-10-04)
+## Candidate-first information and recognition settings (2026-10-04)
 
-Explicit latest user authorization extends the continuous candidate. A valid
-card-present / cornersValid observation with a printing ID and finite cosine
-similarity ≥0.50 creates a nonmodal `もしかして？` proposal after **one** observation;
-no automatic acceptance threshold is lowered. Show verified reference metadata
-and a compact thumbnail when available, actual candidate ID while loading, and
-`類似度 0.623` style raw cosine values. Latest diagnostic score and distinct-Oracle
-margin are also displayed. Neither value is a calibrated confidence probability.
-The green quad means detected geometry only.
+This latest user-authorized behavior intentionally replaces automatic acceptance.
+A valid physical printing candidate appears as `もしかして？` after one observation
+at cosine≥0.50. Every camera/file recognition match requires `これです`; high
+scores/repetitions never mutate history/result. There is no auto-enable setting.
+`違う` suppresses the stationary Oracle identity until different valid context or
+sustained absence. Versioned pointerdown/Enter/Space gestures pin identity;
+held Space/Enter repeats and blur/window blur/pointercancel cannot accept B through
+an A gesture. Stop/restart and settings invalidate in-flight evidence.
 
-Proposal updates never request focus, scroll, stop capture, create history, fetch
-prices/FX or replace confirmed/manual selections. `これです` accepts only matching,
-verified, available printing metadata; unavailable lookup truthfully refuses.
-Pointerdown / Enter / Space capture an immutable version and printing identity.
-If evidence changes during the interaction, confirmation is ignored rather than
-confirming a different card. `違う` suppresses stationary same-Oracle proposals
-(printing ID fallback), until valid different-Oracle context or sustained absence.
-Confirmed same-card proposals remain suppressed until the existing absence rearm
-or a genuinely different accepted card. Explicit Stop/new scan clears scan-context
-suppression. Camera confirmation joins the continuous acceptance guard and history,
-without stopping capture. Existing strong automatic acceptance reconciles/hides the
-proposal. File input retains finite two-repeat auto scanning, while its first valid
-observation can already be explicitly confirmed; its old repeat cannot overwrite
-that confirmation.
+The main candidate panel is in normal document flow, with persistent confirmation
+controls before progressively loaded information. It shows a full reference image,
+verified Japanese display name (same Oracle; matching set/number preferred, then
+other Japanese printing), English Oracle name, physical expansion name/code,
+collector number/language/default supported finish, overseas approximate JPY
+primary and USD secondary, and existing paper-format icons/disclosures. Missing
+Japanese printed_name is explicitly unavailable; English is never relabelled as
+Japanese or translated. Japanese display lookup never changes physical image,
+price, expansion, language or finish. Banned/not-legal icons are grey, restricted
+and unknown remain distinct. Safe image URLs and existing DFC behavior are reused.
 
-Snapshot metadata requests use the existing validated Repository/JsonClient,
-provider scheduler (110ms card / 510ms search starts and 429 cooldown), tab cache,
-and an additional coalesced 100-entry / 60-second snapshot cache including failures.
-Superseded pending snapshots are aborted, so a slow proposal does not block a new
-accepted card behind the client's request queue. Generation/version checks reject
-late dismissed/replaced responses. No inference fixture ID is a product input.
-Thumbnail URLs require HTTPS and an approved Scryfall image hostname.
+Candidate prices use a separate ResultSession with matching generation/revision,
+exact printing ID/Oracle/language and supported finish. Null differs from zero.
+Absent/invalid FX retains USD only, no fixed FX; Scryfall response-confirmation
+time is distinguished from unavailable price-update time, and Frankfurter/ECB
+latest publication date is shown. All earlier candidate fields are cleared on
+replacement; late card/JP/image/price/FX callbacks cannot populate a newer version.
+Candidate state has no write path to confirmed session, manual controls or history.
 
-The optional collapsed `認識設定（デバッグ）` panel follows the search panel.
-Values are tab memory only; reload restores defaults, with no storage/eval. Controls
-apply on change, and the reset button reapplies every default:
+Existing Repository/JsonClient parsing, rate scheduler, 429 handling, timeouts and
+bounded tab caches apply. A separate candidate Repository request queue prevents
+slow confirmed printing-list requests from blocking a new proposal; provider
+limits remain shared. Exact-card snapshots and same-Oracle printing lists coalesce
+with 100-entry/60-second caches including failures, and superseded pending requests
+abort. FX coalesces independently through the same cache wrapper plus the existing
+one-hour provider cache; a cached global USD/JPY rate can be reused across cards.
+Confirmed result requests still use the main Repository, so explicit confirmation
+can fetch a card/list once more in that separate cache. No new calls per frame:
+same-version observations update raw score only, and metadata/price/FX never block
+inference. Card images continue to be public provider reference images.
+
+Collapsed `認識設定（デバッグ）` follows search. Tab memory only, reload defaults:
 
 | Setting | Default | Inclusive bounds | Integer |
 |---|---:|---:|---|
 | Tentative cosine | 0.50 | 0–1 | no |
-| Automatic cosine | 0.75 | 0–1 | no |
-| Distinct-Oracle auto margin | 0.025 | 0–1 | no |
-| Same-printing auto observations | 2 | 1–10 | yes |
 | Post-inference delay, ms | 180 | 0–2000 | yes |
 | Consecutive absence rearm observations | 3 | 1–20 | yes |
 | Absence rearm elapsed time, ms | 600 | 0–10000 | yes |
 | Geometry stale timeout, ms | 1500 | 100–10000 | yes |
 
-Invalid/empty/nonfinite/out-of-range/fractional-integer values and tentative cosine
-above auto cosine are rejected, restoring the current real value with an error.
-Score/margin inputs use 0.001 UI steps; finite values within bounds are accepted.
-Setting changes/reset clear streaks, pending proposals and geometry, reset absence
-counts/timestamps, and invalidate in-flight evidence. They preserve confirmed
-selection, physical override, history and continuous accepted-identity suppression,
-and do not request permission/restart camera. A pending scheduling timer uses its
-already scheduled delay; subsequent scheduling uses the new value. File input is
-still at most two repeats even when configured auto observations exceed two, so
-explicit confirmation remains available. Detector minCornerConfidence is **not**
-exposed because this candidate does not wire a worker detector setting end-to-end.
-Independent combined TEST/QA and real phone validation remain separate requirements.
+Automatic score/margin/streak controls and defaults are removed. Numeric diagnostic
+score/margin remain read-only. Invalid/empty/nonfinite/out-of-range/fractional
+integer values restore the real current value with an error. Tentative score may
+be any finite value in [0,1], without an obsolete auto-score relationship. Applying
+settings/reset invalidates proposals/inflight evidence/geometry and resets absence,
+preserving confirmed manual state/history/accepted suppression and live stream.
+Already scheduled delay completes; later scheduling uses the new value. Model,
+geometry validation and worker thresholds are unchanged. Independent combined QA
+and real phone validation remain separate requirements.
