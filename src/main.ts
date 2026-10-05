@@ -4,6 +4,7 @@ import { closeIconButton } from './ui/close-button.js';
 import { Repository, FxProvider } from './data/repository.js';
 import type { Card, Face } from './data/cards.js';
 import { japaneseName, japaneseDisplay, japaneseFaceName } from './data/japanese-name.js';
+import { externalLinks } from './data/external-links.js';
 import { ScanHistory } from './ui/scan-history-model.js';
 import { ScanHistoryView } from './ui/scan-history.js';
 import { FormatLegality } from './ui/format-legality.js';
@@ -104,10 +105,13 @@ const tentativeActions=el('div','','actions'); tentativeActions.append(confirm,d
 const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='candidate-details';tentativeDetails.setAttribute('aria-label','候補の詳細');tentativeDetails.setAttribute('role','region');tentativeDetails.tabIndex=0;
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
 const tentativePrintings=new PrintingsList(card=>viewPrinting(card));
+const tentativeLinks=el('section','','candidate-external-links');tentativeLinks.setAttribute('aria-label','外部リンク');
+const wisdomLink=externalLink('Wisdom Guildで見る');const hareruyaLink=externalLink('晴れる屋で見る');
+tentativeLinks.append(el('h3','外部リンク'),wisdomLink,hareruyaLink);
 const nameDetails=button('',()=>openCandidateDetail(),'candidate-name-target');nameDetails.setAttribute('aria-label','カード名から詳細を見る');tentativeSummary.append(nameDetails);
 const imageDetails=button('',()=>openCandidateDetail(),'candidate-image-target');imageDetails.setAttribute('aria-label','画像から詳細を見る');tentativeSummary.append(imageDetails);
 // Detail order: card text first, then physical expansion/status, price sources, other printings.
-tentativeSummary.append(tentativePrice,tentativeFormats.node); tentativeDetails.append(tentativeRules,tentativeExpansion,tentativeMessage,tentativeSources,tentativePrintings.node);
+tentativeSummary.append(tentativePrice,tentativeFormats.node); tentativeDetails.append(tentativeRules,tentativeExpansion,tentativeMessage,tentativeSources,tentativeLinks,tentativePrintings.node);
 tentativePanel.append(tentativeSummary,tentativeActions,tentativeDetails,announcement);
 const diagnostics=el('p','類似度 — · margin —','small');
 const settingsPanel=el('details','','recognition-settings'); settingsPanel.append(el('summary','認識設定（デバッグ）'),el('p','このタブのみ。再読み込みで初期値に戻ります。類似度は未較正の cosine 値で、確率ではありません。','small'));
@@ -338,7 +342,7 @@ function showCard(card:Card,faceIndex?:number,preferredFinish?:string):void {
   const finish=preferredFinish&&card.finishes.includes(preferredFinish)?preferredFinish:card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
   shown={card,finish};japaneseSnapshots.cancelExcept(card.oracle_id);candidateSession.reset();tentativeSources.replaceChildren();tentativePrice.replaceChildren();
   if(!staticView){const saved=suggestion!==null&&savedVersion===suggestion.version&&savedCardId===card.id;confirm.textContent=saved?'保存しました ✓':'履歴に保存';tentativeMessage.textContent=saved?'保存しました ✓':'実物の版・言語・加工は未確認';}
-  shownJapanese=japaneseDisplay(card,[]);
+  shownJapanese=japaneseDisplay(card,[]);renderExternalLinks(card,shownJapanese);
   tentativeName.textContent=japaneseName(card)??'確認中…';tentativeEnglish.textContent=card.name;
   tentativeSet.update(card);
   tentativeExpansion.textContent=`${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
@@ -352,9 +356,12 @@ function showCard(card:Card,faceIndex?:number,preferredFinish?:string):void {
    printings=cards.some(x=>x.id===card.id)?cards:[card,...cards];tentativePrintings.update(printings,card.id);applyJapanese(card,printings);
   }).catch(()=>{if(revision!==viewRevision)return;tentativePrintings.fail();if(!japaneseName(card))tentativeName.textContent='日本語名は利用できません';});
 }
+// Plain links opened by the user's click; hrefs are only (re)computed here, never fetched.
+function externalLink(text:string):HTMLAnchorElement {const a=el('a',text,'external-link');a.target='_blank';a.rel='noopener noreferrer';return a;}
+function renderExternalLinks(card:Card,japanese:Card|null):void {const links=externalLinks(card,japanese);wisdomLink.href=links.wisdomGuild;hareruyaLink.href=links.hareruya;}
 function applyJapanese(card:Card,cards:Card[]):void {
  if(japaneseName(card))return;
- const japanese=japaneseDisplay(card,cards);shownJapanese=japanese;
+ const japanese=japaneseDisplay(card,cards);shownJapanese=japanese;renderExternalLinks(card,japanese);
  tentativeName.textContent=japanese ? japaneseName(japanese)! : '日本語名は利用できません';renderCandidateRules(card,japanese??null);
 }
 // Tapping a printing thumbnail switches the displayed version (read-only browse).
