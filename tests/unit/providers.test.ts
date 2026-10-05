@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { JsonClient, ProviderError } from '../../src/data/http.js';
 import { Repository, FxProvider, parseFx, parseCard } from '../../src/data/repository.js';
+import type { Card } from '../../src/data/cards.js';
 import { card } from './fixtures.js';
 it('retrieves every printing page, preserving exact language IDs (SYNTHETIC)', async () => {
   const calls: string[] = [];
@@ -20,6 +21,17 @@ it('rejects invalid FX and currency direction; valid provider-shaped zero prices
   expect(parseFx({ base: 'USD', quote: 'JPY', rate: 150, date: '2026-10-02' })).toEqual({ jpyPerUsd: 150, asOf: '2026-10-02' });
   for (const bad of [{ base: 'JPY', quote: 'USD', rate: 150, date: '2026-10-02' }, { base: 'USD', quote: 'JPY', rate: 0, date: '2026-10-02' }, { base: 'USD', quote: 'JPY', rate: 150, date: '2026-02-30' }]) expect(() => parseFx(bad)).toThrow();
   expect(parseCard(card).prices.usd).toBe('0.00'); expect(() => parseCard({ ...card, prices: { usd: 4 } })).toThrow();
+});
+it('resolves oracle_id from the first face when the top-level field is missing (SYNTHETIC reversible_card shape)', () => {
+  // Real Scryfall shape for reversible_card reprints (e.g. "Overgrown Tomb // Overgrown Tomb",
+  // Edge of Eternities Commander #350): top-level oracle_id is null, both faces carry the real id.
+  const { oracle_id: _drop, ...withoutTop } = card as Card & { oracle_id: string };
+  const reversible = { ...withoutTop, oracle_id: null, layout: 'reversible_card', card_faces: [{ name: 'Overgrown Tomb', oracle_id: card.oracle_id }, { name: 'Overgrown Tomb', oracle_id: card.oracle_id }] };
+  expect(parseCard(reversible).oracle_id).toBe(card.oracle_id);
+});
+it('still rejects a card with no resolvable oracle_id anywhere (SYNTHETIC)', () => {
+  const { oracle_id: _drop, ...withoutTop } = card as Card & { oracle_id: string };
+  expect(() => parseCard({ ...withoutTop, oracle_id: null })).toThrow('カード情報が不正です');
 });
 it('caches successful metadata, rejects abort even on cache hit, and never retries 429 automatically (SYNTHETIC)', async () => {
   const fetcher = vi.fn(async () => new Response(JSON.stringify({ value: 0 })));
