@@ -121,7 +121,7 @@ html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 
 /* Intro uses the idle camera space; lifecycle and model status stay separate. */
 .camera-intro{position:absolute;inset:76px 20px 52px;display:flex;flex-direction:column;justify-content:center;max-width:480px;margin-inline:auto;color:#f0f1f5;pointer-events:none}
-.camera-intro h2{font-size:1.9rem;margin:0 0 16px}.camera-intro p{margin:0 0 12px;line-height:1.7;overflow-wrap:anywhere}
+.camera-intro h2{font-size:1.9rem;margin:0 0 16px;display:flex;align-items:center;gap:10px}.camera-intro-heading .intro-logo{flex:none;filter:drop-shadow(0 1px 3px #000a)}.camera-intro p{margin:0 0 12px;line-height:1.7;overflow-wrap:anywhere}
 #app .viewport h1{position:static;width:auto;height:auto;overflow:visible;clip-path:none;font-size:.85rem;margin:0 0 0 145px;align-self:center}
 #app .viewport header{justify-content:space-between}
 #app.short-viewport .viewport h1{position:static;width:auto;height:auto;overflow:visible;clip-path:none;font-size:.7rem}
