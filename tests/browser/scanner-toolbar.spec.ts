@@ -65,7 +65,7 @@ test('settings is an accessible monochrome SVG gear with keyboard activation', a
     const label = node.querySelector('span')!.getBoundingClientRect();
     return button.width === 44 && label.width <= 1 && label.height <= 1;
   })).toBe(true);
-  await expect(page.locator('header')).toHaveText('MTG Scanner情報・設定');
+  await expect(page.locator('header')).toHaveText('Mana Peek情報・設定');
   await settings.focus();
   await page.keyboard.press('Space');
   await expect(page.locator('.utility-drawer')).toBeVisible();

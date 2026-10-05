@@ -22,7 +22,7 @@ function mark(event: string, detail?: unknown): void { marks.push({ event, ms: p
 mark('shell-start');
 const repo = new Repository(); const fx = new FxProvider();
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const header = el('header'); header.append(el('h1', 'MTG Scanner'));
+const header = el('header'); header.append(el('h1', 'Mana Peek'));
 const scan = el('section', '', 'panel scan-panel');
 const viewport = el('div', '', 'viewport');
 const video = el('video'); video.muted = true; video.playsInline = true; video.autoplay = true;
@@ -30,7 +30,9 @@ const guide = el('div', '', 'guide'); guide.append(el('span', 'カードの四�
 const overlayCanvas = el('canvas', '', 'detection-overlay'); overlayCanvas.setAttribute('aria-hidden', 'true');
 const detectionStatus = el('p', 'カード検出なし', 'small'); detectionStatus.setAttribute('role', 'status');
 const overlay = new DetectionOverlay(overlayCanvas, video, visible => { detectionStatus.textContent = visible ? 'カードの四隅を検出 · カード名の確定とは別です' : 'カード検出なし'; });
-guide.hidden = true; viewport.append(video, overlayCanvas, guide);
+const cameraIntro = el('div', '', 'camera-intro');
+cameraIntro.append(el('h2', 'Mana Peek'), el('p', 'MTGカードをかざして、日本語情報や参考価格を確認。'), el('p', '結果をタップすると詳細が開きます。残したいカードは「履歴に保存」。', 'small'));
+guide.hidden = true; viewport.append(video, overlayCanvas, guide, cameraIntro);
 const cameraStatus = el('p', 'カメラは停止中', 'status camera-status'); cameraStatus.setAttribute('role', 'status');
 const modelStatus = el('p', '認識データを準備中', 'muted small'); modelStatus.setAttribute('role', 'status');
 const scanActions = el('div', '', 'actions');
@@ -79,13 +81,13 @@ const gearHub = document.createElementNS(gear.namespaceURI, 'circle');
 gearHub.setAttribute('cx', '12'); gearHub.setAttribute('cy', '13'); gearHub.setAttribute('r', '3');
 gear.append(gearOutline, gearHub); settingsButton.append(gear, el('span', '情報・設定', 'sr-only')); header.append(settingsButton);
 const actionPanel = el('section', '', 'action-panel'); actionPanel.append(scanActions);
-const tentativePanel = el('aside', '', 'tentative'); tentativePanel.hidden=true; tentativePanel.setAttribute('aria-label','もしかして？');
+const tentativePanel = el('aside', '', 'tentative'); tentativePanel.hidden=true; tentativePanel.setAttribute('aria-label','認識候補');
 const tentativeEnglish=el('p','','small');const tentativeExpansion=el('p','','small');const tentativePrice=el('div','','candidate-price');const tentativeFormats=new FormatLegality('candidate-format-disclosure');const tentativeReference=new ReferenceImage();
 const tentativeSet=new SetBadge();
 const tentativeName=el('strong'); const tentativeScore=el('span','','small');
 const tentativeMessage=el('p','','small');tentativeMessage.setAttribute('role','status'); const announcement=el('span','','sr-only'); announcement.setAttribute('role','status');
 const confirm=button('履歴に保存',()=>confirmSuggestion());confirm.setAttribute('aria-label','履歴に保存'); const dismiss=button('別のカードを探す',()=>dismissSuggestion());
-const tentativeContent=el('div'); tentativeContent.append(el('span','もしかして？','eyebrow'),tentativeName,tentativeEnglish,tentativeSet.node,tentativeExpansion,tentativeScore,tentativeMessage);
+const tentativeContent=el('div'); tentativeContent.append(tentativeName,tentativeEnglish,tentativeSet.node,tentativeExpansion,tentativeScore,tentativeMessage);
 const tentativeActions=el('div','','actions'); tentativeActions.append(confirm,dismiss); const tentativeSummary=el('div','','candidate-summary'); tentativeSummary.append(tentativeReference.node,tentativeContent);
 const tentativeDetails=el('div','','candidate-details'); tentativeDetails.id='candidate-details';tentativeDetails.setAttribute('aria-label','候補の詳細');tentativeDetails.setAttribute('role','region');tentativeDetails.tabIndex=0;
 const tentativeRules=el('div','','candidate-rules');const tentativeSources=el('div','','candidate-sources');
@@ -116,7 +118,7 @@ const historyView = new ScanHistoryView(entry => {
 // The camera and dock are the two visual-viewport rows. Auxiliary routes are
 // modal overlay windows; the ordinary candidate dock stays nonmodal.
 const candidateDock=el('section','','candidate-dock');
-const dockToolbar=el('div','','dock-toolbar'); dockToolbar.append(el('span','もしかして？','eyebrow'));
+const dockToolbar=el('div','','dock-toolbar'); dockToolbar.append(el('span','','eyebrow'));
 const viewDetails=button('詳細を見る',()=>openCandidateDetail());viewDetails.disabled=true;dockToolbar.append(viewDetails);
 const emptyCandidate=el('p','カードをかざすと情報が表示されます。保存は任意です。','empty-candidate small');
 const candidateDetail=el('dialog','','candidate-detail-sheet');candidateDetail.id='candidate-detail-sheet';
@@ -156,14 +158,14 @@ const navigation=el('nav','','panel-navigation'); navigation.setAttribute('aria-
 const drawer=el('dialog','','utility-drawer'); drawer.setAttribute('aria-modal','true'); drawer.setAttribute('aria-label','スキャナーの補助画面');
 const drawerHeading=el('h2'); drawerHeading.id='drawer-heading';drawer.setAttribute('aria-labelledby',drawerHeading.id);
 const drawerBar=el('div','','drawer-bar');const drawerClose=button('補助画面を閉じる',()=>closeDrawer());drawerBar.append(drawerHeading,drawerClose);
-const drawerBody=el('div','','drawer-body');const historyRoute=el('div');historyRoute.append(el('p','確定したスキャンはまだありません。','empty-history'),historyView.node);
+const drawerBody=el('div','','drawer-body');const historyRoute=el('div');const currentCardButton=button('選択中のカードを確認',()=>showDrawer('result'));currentCardButton.hidden=true;historyRoute.append(currentCardButton,el('p','確定したスキャンはまだありません。','empty-history'),historyView.node);
 const settingsRoute=el('div');settingsRoute.append(settingsPanel,information);
 searchPanel.append(fileLabel);
 const routes={search:searchPanel,history:historyRoute,settings:settingsRoute,result};
 const routeNames={search:'名前検索',history:'履歴',settings:'設定',result:'確定カード'};
 let drawerTrigger:HTMLElement|null=null;
 for(const route of Object.keys(routes) as (keyof typeof routes)[]) {
- const control=button(routeNames[route],()=>showDrawer(route));control.setAttribute('aria-controls','utility-drawer');control.setAttribute('aria-expanded','false');control.dataset.route=route;navigation.append(control);
+ if(route==='search'||route==='history'){const control=button(routeNames[route],()=>showDrawer(route));control.setAttribute('aria-controls','utility-drawer');control.setAttribute('aria-expanded','false');control.dataset.route=route;navigation.append(control);}
  routes[route].classList.add('drawer-route');routes[route].dataset.route=route;drawerBody.append(routes[route]);
 }
 drawer.id='utility-drawer';drawer.append(drawerBar,drawerBody);
@@ -176,7 +178,7 @@ function showDrawer(route:keyof typeof routes):void {
  drawerHeading.textContent=routeNames[route];
  for(const [key,node] of Object.entries(routes))node.classList.toggle('route-active',key===route);
  for(const control of navigation.querySelectorAll<HTMLButtonElement>('button'))control.setAttribute('aria-expanded',String(control.dataset.route===route));
- historyRoute.querySelector<HTMLElement>('.empty-history')!.hidden=history.allEntries.length>0;information.open=route==='settings';drawerBody.scrollTop=0;
+ currentCardButton.hidden=!session.value.card;historyRoute.querySelector<HTMLElement>('.empty-history')!.hidden=history.allEntries.length>0;information.open=route==='settings';drawerBody.scrollTop=0;
  if(!drawer.open){drawer.showModal();scan.inert=true;candidateDock.inert=true;}
  drawerClose.focus({preventScroll:true});
 }
@@ -265,7 +267,7 @@ for(const control of [confirm,dismiss]) {
  // Release can occur after focus left the button. Never reuse that canceled gesture.
  document.addEventListener('keyup',event=>{if(gestures.get(control)?.key===event.key)gestures.delete(control);});
 }
-function hideSuggestion():void {if(candidateDetail.open)return;viewDetails.disabled=true;queuedVerified=null;loadingSuggestion=null;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと情報が表示されます。保存は任意です。';}
+function hideSuggestion():void {if(candidateDetail.open)return;viewDetails.disabled=true;queuedVerified=null;loadingSuggestion=null;tentativeSet.clear();snapshots.cancelExcept(null);japaneseSnapshots.cancelExcept(null);suggestion=null;suggestionCard=null;suggestionJapanese=null;candidateSession.reset();tentativeReference.clear();tentativeReference.node.remove();tentativeFormats.clear();tentativeFormats.node.remove();tentativePrice.classList.remove("price-box");tentativePanel.hidden=true;emptyCandidate.hidden=false;emptyCandidate.textContent='カードをかざすと情報が表示されます。保存は任意です。';cameraIntro.hidden=active;}
 function applySettings(next: RecognitionSettings):void {
  settings={...next};evidenceRevision++;
  tentative.reset(settings.tentativeScore,settings.rearmCount,settings.rearmMs);hideSuggestion();overlay.clear();overlay.staleMs=settings.overlayMs;
@@ -290,7 +292,7 @@ function commitSuggestion(next:Suggestion,card:Card):void {
   tentativeReference.clear();tentativeFormats.clear();tentativePrice.replaceChildren();tentativeSources.replaceChildren();
   tentativeSummary.prepend(tentativeReference.node);tentativeSummary.append(tentativeFormats.node);tentativePrice.classList.add('price-box');
   tentativeScore.textContent=`類似度 ${next.score.toFixed(3)}`;
-  tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='もしかして？ 候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
+  tentativePanel.hidden=false;emptyCandidate.hidden=true;if(performance.now()-lastAnnouncement>=2000){announcement.textContent='候補を確認できます';lastAnnouncement=performance.now();}suggestionCard=card;cameraIntro.hidden=true;suggestionJapanese=japaneseDisplay(card,[]);tentativeName.textContent=japaneseName(card) ? `日本語：${japaneseName(card)}` : '日本語：確認中…';
   tentativeEnglish.textContent=`英語：${card.name}`;const finish=card.finishes.includes('nonfoil')?'nonfoil':card.finishes[0]??'nonfoil';
   tentativeSet.update(card);
   tentativeExpansion.textContent=`${card.set_name} (${card.set.toUpperCase()}) #${card.collector_number} · ${card.lang} · ${finish}`;
@@ -384,7 +386,7 @@ function errorText(error: unknown, fallback: string): string {
   return fallback;
 }
 function stopCamera(message?: string): void {
-  closeCandidateDetail();scanGeneration++; evidenceRevision++; hideSuggestion(); tentative.newContext();for(const gesture of gestures.values())gesture.snapshot=null; active = false;  overlay.stop(); overlayCanvas.dataset.detected = 'false'; detectionStatus.textContent = 'カード検出なし';
+  closeCandidateDetail();scanGeneration++; evidenceRevision++; hideSuggestion(); tentative.newContext();for(const gesture of gestures.values())gesture.snapshot=null; active = false; cameraIntro.hidden=false; overlay.stop(); overlayCanvas.dataset.detected = 'false'; detectionStatus.textContent = 'カード検出なし';
   if (loopTimer) clearTimeout(loopTimer); loopTimer = null;
   stream?.getTracks().forEach(track => track.stop()); stream = null; video.srcObject = null;
   scanLabel.textContent = 'スキャン開始'; guide.hidden = true;
@@ -396,7 +398,7 @@ async function startCamera(): Promise<void> {
   closeDrawer();
   currentHistoryGeneration = null;
   detailGeneration++; detailRequest?.abort(); session.reset();
-  stopCamera(); const generation = scanGeneration; active = true; scanLabel.textContent = '停止';
+  stopCamera(); const generation = scanGeneration; active = true; cameraIntro.hidden=true; scanLabel.textContent = '停止';
   cameraStatus.textContent = 'カメラの許可・起動を待っています'; mark('camera-start');
   const ready = prepare();
   try {

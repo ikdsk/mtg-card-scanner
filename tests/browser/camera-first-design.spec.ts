@@ -7,7 +7,7 @@ test('functional neutral camera-first shell has visible actions without automati
   await page.exposeFunction('permissionRequested', () => permissions++);
   await page.addInitScript(() => { Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: async () => { await (window as unknown as { permissionRequested: () => Promise<void> }).permissionRequested(); throw new DOMException('SYNTHETIC denial', 'NotAllowedError'); } } }); });
   await page.goto('/');
-  await expect(page.locator('header')).toHaveText('MTG Scanner情報・設定');
+  await expect(page.locator('header')).toHaveText('Mana Peek情報・設定');
   await expect(page.getByText('この1枚を、もっと知る。')).toHaveCount(0);
   await expect(page.getByText('カードをかざす。知りたいことが見える。')).toHaveCount(0);
   await expect(page.locator('.intro')).toHaveCount(0);

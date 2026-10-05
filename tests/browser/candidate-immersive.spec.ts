@@ -47,9 +47,9 @@ for(const size of [{width:440,height:780},{width:320,height:600},{width:390,heig
 });
 test('explicit routes preserve live candidate, confirmed selection and history-stop policy (SYNTHETIC)',async({page},info)=>{
  await page.setViewportSize({width:390,height:844});await setup(page);
- await page.getByRole('button',{name:'設定',exact:true}).click();await expect(page.locator('.recognition-settings')).toBeVisible();await page.getByText('認識設定（デバッグ）',{exact:true}).click();await expect(page.getByLabel('提案の類似度',{exact:true})).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'設定',exact:true})).toBeFocused();await fitted(page);
+ await page.getByRole('button',{name:'情報・設定',exact:true}).click();await expect(page.locator('.recognition-settings')).toBeVisible();await page.getByText('認識設定（デバッグ）',{exact:true}).click();await expect(page.getByLabel('提案の類似度',{exact:true})).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'情報・設定',exact:true})).toBeFocused();await fitted(page);
  await page.getByRole('button',{name:'履歴に保存',exact:true}).click();await expect(page.locator('.scan-history-row')).toHaveCount(1);await expect(page.locator('.utility-drawer')).toBeHidden();await expect(page.getByRole('button',{name:'停止',exact:true})).toBeEnabled();
- await page.getByRole('button',{name:'確定カード',exact:true}).click();await page.getByLabel('加工',{exact:true}).selectOption('foil');await page.getByRole('button',{name:'スキャンに戻る',exact:true}).click();
+ await openRoute(page,'確定カード');await page.getByLabel('加工',{exact:true}).selectOption('foil');await page.getByRole('button',{name:'スキャンに戻る',exact:true}).click();
  await page.getByRole('button',{name:'履歴',exact:true}).click();await expect(page.locator('.scan-history')).toBeVisible();await expect(page.locator('.scan-history-row')).toContainText('Foil');await page.locator('.scan-history-row').click();await expect(page.locator('.result')).toBeVisible();expect(await page.evaluate(()=>(window as any).immersiveStream.getTracks().every((t:MediaStreamTrack)=>t.readyState==='ended'))).toBe(true);await expect(page.getByLabel('加工',{exact:true})).toHaveValue('foil');
  await openRoute(page,'名前検索');await page.getByRole('searchbox').fill('Synthetic');await page.setViewportSize({width:390,height:360});await expect(page.getByRole('searchbox')).toBeInViewport();await expect(page.getByRole('button',{name:'検索',exact:true})).toBeInViewport();expect(await page.evaluate(()=>scrollY)).toBe(0);
 });
@@ -66,7 +66,7 @@ test('visualViewport keyboard offset keeps dock controls inside visible area wit
 test('settings overlay is modal and leaves background geometry unchanged (SYNTHETIC)',async({page})=>{
  await page.setViewportSize({width:320,height:600});await setup(page);
  const geometry=async()=>Promise.all(['.viewport','.candidate-dock'].map(selector=>page.locator(selector).boundingBox()));
- const before=await geometry();const trigger=page.getByRole('button',{name:'設定',exact:true});await trigger.click();
+ const before=await geometry();const trigger=page.getByRole('button',{name:'情報・設定',exact:true});await trigger.click();
  await expect(page.getByRole('dialog',{name:'設定',exact:true})).toBeVisible();
  expect(await page.locator('.utility-drawer').evaluate(n=>n.matches(':modal'))).toBe(true);
  expect(await geometry()).toEqual(before);await expect(page.getByRole('button',{name:'補助画面を閉じる'})).toBeFocused();
@@ -79,7 +79,7 @@ test('settings overlay is modal and leaves background geometry unchanged (SYNTHE
 });
 
 test('overlay focus endpoints stay contained with no backdrop clickthrough (SYNTHETIC)',async({page},info)=>{
- await page.setViewportSize({width:1280,height:900});await setup(page);await page.getByRole('button',{name:'設定',exact:true}).click();
+ await page.setViewportSize({width:1280,height:900});await setup(page);await page.getByRole('button',{name:'情報・設定',exact:true}).click();
  const close=page.getByRole('button',{name:'補助画面を閉じる',exact:true});
  await page.keyboard.press('Shift+Tab');
  expect(await page.locator('.utility-drawer').evaluate(n=>n.contains(document.activeElement))).toBe(true);
@@ -88,7 +88,7 @@ test('overlay focus endpoints stay contained with no backdrop clickthrough (SYNT
  await page.mouse.click(170,70);await expect(page.locator('.utility-drawer')).toBeVisible();
  expect(await page.evaluate(()=>(window as any).immersiveStream.getTracks().every((t:MediaStreamTrack)=>t.readyState==='live'))).toBe(true);
  await expect(page.locator('.scan-history-row')).toHaveCount(0);
- await close.click();await expect(page.getByRole('button',{name:'設定',exact:true})).toBeFocused();
+ await close.click();await expect(page.getByRole('button',{name:'情報・設定',exact:true})).toBeFocused();
  await closeRoute(page);await page.getByRole('button',{name:'停止',exact:true}).click();
 });
 
@@ -96,7 +96,7 @@ for(const short of [false,true])test(`settings overlay 320px ${short?'short visu
  await page.setViewportSize({width:320,height:740});await setup(page);
  if(short)await page.evaluate(()=>{const viewport=Object.assign(new EventTarget(),{width:320,height:320,offsetTop:120,offsetLeft:0});Object.defineProperty(window,'visualViewport',{value:viewport,configurable:true});window.dispatchEvent(new Event('resize'));});
  const background=async()=>Promise.all(['.viewport','.candidate-dock'].map(selector=>page.locator(selector).boundingBox()));
- const before=await background();await page.getByRole('button',{name:'設定',exact:true}).click();
+ const before=await background();await page.getByRole('button',{name:'情報・設定',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'設定',exact:true});await expect(dialog).toBeVisible();
  await page.getByText('認識設定（デバッグ）',{exact:true}).click();
  const input=page.getByLabel('四隅の表示期限 (ms)',{exact:true});await input.focus();await expect(input).toBeInViewport();
@@ -108,7 +108,7 @@ for(const short of [false,true])test(`settings overlay 320px ${short?'short visu
  await page.mouse.wheel(0,600);expect(await page.evaluate(()=>scrollY)).toBe(0);expect(await background()).toEqual(before);
  await page.locator('.drawer-body').evaluate(n=>n.scrollTop=0);
  await page.screenshot({path:info.outputPath(`settings-overlay320${short?'-short':''}.png`)});
- await close.click();await expect(page.getByRole('button',{name:'設定',exact:true})).toBeFocused();expect(await background()).toEqual(before);
+ await close.click();await expect(page.getByRole('button',{name:'情報・設定',exact:true})).toBeFocused();expect(await background()).toEqual(before);
  expect(await page.evaluate(()=>(window as any).immersiveStream.getTracks().every((t:MediaStreamTrack)=>t.readyState==='live'))).toBe(true);
  await expect(page.locator('.scan-history-row')).toHaveCount(0);await closeRoute(page);await page.getByRole('button',{name:'停止',exact:true}).click();
 });
@@ -129,4 +129,16 @@ test('focused settings field stays reachable when keyboard visual viewport shrin
  await expect(input).toBeFocused();await expect(page.getByRole('button',{name:'補助画面を閉じる'})).toBeInViewport();expect(await page.evaluate(()=>scrollY)).toBe(0);
  await page.screenshot({path:info.outputPath(`settings-overlay-keyboard-focused.png`)});
  await closeRoute(page);await closeRoute(page);await page.getByRole('button',{name:'停止',exact:true}).click();
+});
+
+for(const width of [320,390])test(`Mana Peek active candidate has neutral status and no idle intro ${width} (SYNTHETIC)`,async({page},info)=>{
+ await page.setViewportSize({width,height:844});await setup(page);
+ await expect(page.locator('.camera-intro')).toBeHidden();
+ await expect(page.locator('header h1')).toHaveText('Mana Peek');await expect(page.locator('header h1')).toBeInViewport();
+ await expect(page.locator('.tentative')).toHaveAttribute('aria-label','認識候補');
+ await expect(page.locator('body')).not.toContainText('もしかして？');
+ await expect(page.locator('.tentative [role=status]').last()).toHaveText('候補を確認できます');
+ await expect(page.locator('.candidate-summary .format-icon')).toHaveCount(7);
+ await page.screenshot({path:info.outputPath(`mana-peek-active-candidate${width}.png`)});
+ await page.getByRole('button',{name:'停止',exact:true}).click();await expect(page.locator('.camera-intro')).toBeVisible();
 });
