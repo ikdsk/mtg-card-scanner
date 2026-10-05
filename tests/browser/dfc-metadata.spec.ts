@@ -1,6 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';
 import en from '../fixtures/delver-en.json' with {type:'json'};
 import ja from '../fixtures/delver-ja.json' with {type:'json'};
+import hearth from '../fixtures/hearth-elemental.json' with {type:'json'};
 import type {Card} from '../../src/data/cards.js';
 import {openRoute,closeRoute,searchFromCandidate} from './immersive-routes.js';
 const sheet=(page:Page)=>page.getByRole('dialog',{name:'カードの詳細',exact:true});
@@ -77,4 +78,19 @@ test('dismissed DFC cannot resurrect from deferred Japanese metadata',async({pag
  await start(page);await expect(page.locator('.tentative .reference-image img')).toHaveAttribute('src',en.card_faces[0]!.image_uris.normal);
  await searchFromCandidate(page);release();await page.waitForTimeout(700);
  await expect(page.locator('.tentative')).toBeHidden();await expect(page.locator('.scan-history-row')).toHaveCount(0);await expect(page.locator('.result')).toHaveCount(0);
+});
+// Synthetic Hearth Elemental // Stoke Genius shape: only the adventure face carries a Japanese printed_name.
+const partialName='Hearth Elemental // 火（ひ）おこしの天（てん）才（さい）';
+for(const language of ['en','ja'] as const)test(`partially translated Adventure (${language} physical) shows Japanese for translated face and keeps face-level unavailable text`,async({page})=>{
+ const physical=hearth[language] as Card;await install(page,physical,[hearth.en,hearth.ja] as Card[]);await start(page);
+ const name=page.locator('.tentative .candidate-name');
+ await expect(name).toHaveText(partialName);await expect(name).not.toHaveText('日本語名は利用できません');
+ await page.getByRole('button',{name:'履歴に保存',exact:true}).click();
+ await expect(page.locator('.scan-history-row')).toContainText(partialName);
+ await reopenFirstHistory(page);
+ await expect(sheet(page).locator('.candidate-name')).toHaveText(partialName);
+ const faces=sheet(page).locator('.face');
+ await expect(faces.nth(0).locator('h4')).toHaveText('日本語名は利用できません');
+ await expect(faces.nth(1).locator('h4')).toHaveText('火（ひ）おこしの天（てん）才（さい）');
+ await expect(faces.nth(1)).toContainText('冒険面の日本語本文（仮）');
 });
