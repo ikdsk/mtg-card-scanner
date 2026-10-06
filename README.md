@@ -124,9 +124,16 @@ npm run evidence:live
 
 ## ライセンス/公開
 
-`public/recognition/THIRD-PARTY-NOTICES.md` にコード、モデル、辞書、画像、
-APIの条件を分離して記載。CollectorVisionのAGPL全文を同梱し、変更を明示。
-別ライセンスは取得していません。MIT扱いにしていません。
-ローカル/内部実験のみ。公開ネットワーク利用・配布にはユーザーの明示承認、
-AGPLのCorresponding Source提供を含む適合判断、モデル/辞書/画像条件の
-確認が必要です。private GitHubは公開アプリ許可やsource提供義務の代替ではありません。
+本リポジトリ全体を **AGPL-3.0-or-later** でライセンスしています（`LICENSE`参照）。
+組み込んでいるCollectorVision認識エンジン・Cornelius・Milo各モデルがAGPL-3.0のため、
+ネットワーク経由で利用可能にする場合は利用者へCorresponding Sourceを提供する義務があり、
+本リポジトリをpublicにすることでその義務を満たしています。詳細な出典・各条件は
+`public/recognition/THIRD-PARTY-NOTICES.md` に記載。CollectorVisionのAGPL全文を同梱し、
+変更内容を明示しています。MIT扱いにはしていません。
+
+Scryfallのカード画像は`cards.scryfall.io`から直接表示（ホットリンク、再配布・ミラーなし）、
+各参照画像からScryfallのカードページへリンクしています。カードデータ・画像自体の再配布権は
+Scryfall/Wizards of the Coastの利用条件に従い、本リポジトリのライセンスとは別に管理されます。
+
+公開ホスティング・リポジトリ公開は2026-10-05にユーザーが明示承認済みです。ただし、
+実機（iPhone/Android）での動作検証、統合後の独立QAは別途の確認事項として残っています。

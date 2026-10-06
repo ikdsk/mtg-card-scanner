@@ -1,4 +1,4 @@
-# Third-party notices — local/internal evaluation only
+# Third-party notices
 
 This is a modified CollectorVision scanner. Upstream: HanClinto/CollectorVision,
 commit `2a122d00d25c8d112a90e47bf235a021e0c53b0c`.
@@ -42,15 +42,26 @@ at least 110ms apart, shared per provider transport. After 429, wait at least
 Rate limits: https://scryfall.com/docs/api/rate-limits . No paywall or proxy.
 Magic card art/text/trademarks belong to Wizards of the Coast and other owners;
 Scryfall is not a grant to redistribute artwork or models without conditions.
-Do not obscure image artist/copyright attribution. This app does not display
-remote card images; any validation images stay in ignored local artifacts.
+Do not obscure image artist/copyright attribution. This app displays Scryfall's
+own hosted card images directly from `cards.scryfall.io` (hotlinked, never
+proxied, mirrored, or re-uploaded); it does not host or redistribute card
+images itself. Each reference image links back to its Scryfall card page.
 
 Frankfurter: https://frankfurter.dev , ECB reference-rate provider.
 API use is free/no-key; provider terms govern rates. Rates have a published date,
 not a live trading timestamp. No fixed fallback rate.
 
-Public hosting, network use or distribution requires explicit release approval
-and a full compliance decision, including AGPL Corresponding Source access for
-the combined application, model/data/image rights and any third-party notices.
-A private GitHub repository alone does not fulfill a public source-offer duty.
-The localhost internal experiment is not a release authorization.
+## Public release
+
+Public hosting and distribution of this application, and making this
+repository public, were explicitly approved by the user (2026-10-05). This
+repository is licensed as a whole under AGPL-3.0-or-later (see `LICENSE` at
+the repository root) specifically because the vendored CollectorVision
+scanner, Cornelius, and Milo components above are AGPL-3.0; running this
+application over a network requires offering every user access to the
+Corresponding Source of the combined application, which the public GitHub
+repository itself satisfies. Model and catalog data continue to be downloaded
+at runtime rather than committed (see notices above); redistribution rights
+for the underlying Scryfall/MTG card data and embeddings are governed by
+Scryfall's and Wizards of the Coast's own terms, not by this repository's
+license, and are not established or warranted by this project.

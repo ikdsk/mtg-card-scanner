@@ -119,9 +119,14 @@ The original implementation report preserves historical environment limitations.
 - Remote content uses text nodes, never HTML injection. No image/embedding upload,
   no analytics. Local timing ring buffer (300 events) is available on demand.
 
-Public use is not authorized by this executable contract. AGPL/source-offer,
-model/data/image licensing, independent combined-candidate QA and real-device
-performance gates remain separate release requirements.
+Public release of this hosted application and of this repository was explicitly
+approved by the user (2026-10-05). The repository is licensed as a whole under
+AGPL-3.0-or-later (`LICENSE` at repository root) to satisfy Corresponding
+Source obligations from the vendored AGPL recognition engine; this is covered
+in detail in `public/recognition/THIRD-PARTY-NOTICES.md`. Independent
+combined-candidate QA and real-device (iPhone/Android) performance validation
+remain outstanding and are tracked separately — public release approval does
+not substitute for them.
 
 ## Candidate-first information and recognition settings (2026-10-04)
 
