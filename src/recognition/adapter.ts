@@ -28,7 +28,7 @@ export class Recognizer {
       this.rejectReady = reject;
       this.progress('認識データを準備中（初回 約45MB＋実行環境）');
       const local = new URL(location.href).searchParams.has('localAssets');
-      const w = new Worker(`/recognition/scanner.worker.mjs${local ? '?local' : ''}`, { type: 'module' }); this.worker = w;
+      const w = new Worker(`${import.meta.env.BASE_URL}recognition/scanner.worker.mjs${local ? '?local' : ''}`, { type: 'module' }); this.worker = w;
       const fail = (error: Error) => { if (w !== this.worker) return; reject(error); this.waiting?.reject(error); this.waiting = null; this.dispose(); };
       this.timer = setTimeout(() => fail(new Error('認識の準備がタイムアウトしました。再試行または名前検索を利用してください。')), 180000);
       w.onerror = () => fail(new Error('認識モデルを読み込めません。接続を確認して再試行してください。'));
