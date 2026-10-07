@@ -24,6 +24,15 @@ import { alternativeCandidates, type AlternativeCandidate, type CandidateEntry }
 const marks: { event: string; ms: number; detail?: unknown }[] = [];
 function mark(event: string, detail?: unknown): void { marks.push({ event, ms: performance.now(), detail }); if (marks.length > 300) marks.shift(); performance.clearMarks(event); performance.mark(event); }
 mark('shell-start');
+// Anonymous page-view counting (Cloudflare Web Analytics) only on the public GitHub Pages
+// deployment, never on local dev or the Tailscale preview. No cookies, no cross-site tracking,
+// no image/feature data — just that this host rendered a page.
+if (location.hostname === 'ikdsk.github.io') {
+  const beacon = document.createElement('script');
+  beacon.defer = true; beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+  beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: '00c24dfbaf044bc4b54872c21eefbc6b' }));
+  document.head.append(beacon);
+}
 const repo = new Repository(); const fx = new FxProvider();
 const app = document.querySelector<HTMLDivElement>('#app')!;
 const header = el('header'); header.append(el('h1', 'Mana Peek'));
@@ -79,7 +88,7 @@ for (const [name, href] of [['Scryfall', 'https://scryfall.com'], ['Frankfurter 
 }
 footer.append(sources, el('p', 'このアプリと認識コード・モデルはAGPL-3.0でライセンスされています。カードの権利はWizards of the Coast等の権利者に帰属します。', 'small'));
 const notices = el('a', '第三者ライセンスと利用条件'); notices.href = `${import.meta.env.BASE_URL}recognition/THIRD-PARTY-NOTICES.md`; footer.append(notices);
-const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。参照画像はScryfallの画像配信元から取得します。撮影・選択画像は保存せず、解析ログはこのタブのメモリ内のみです。分析サービスへの送信はありません。'));
+const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。参照画像はScryfallの画像配信元から取得します。撮影・選択画像は保存せず、解析ログはこのタブのメモリ内のみです。公開サイト（ikdsk.github.io）ではCloudflare Web Analyticsによる匿名のページビュー計測のみ行い、Cookie不要・個人を識別する情報は送信しません。画像やカード内容は送信対象外です。'));
 footer.append(privacy);
 const debug = el('details'); debug.append(el('summary', '端末内の計測ログ')); const debugOutput = el('pre');
 debug.append(button('計測を表示', () => { debugOutput.textContent = JSON.stringify(marks, null, 2); }), debugOutput); footer.append(debug);
