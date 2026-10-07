@@ -1,5 +1,7 @@
 # Mana Peek 🔍
 
+**👉 [https://ikdsk.github.io/mtg-card-scanner/](https://ikdsk.github.io/mtg-card-scanner/)**
+
 MTG（Magic: The Gathering）カードにスマホのカメラをかざすだけで、日本語のカード名・ルールテキスト・参考価格をすぐ確認できるカードスキャナーです。
 
 <p align="center">
