@@ -27,6 +27,10 @@ function catalogTransport(server: Pick<ViteDevServer, 'middlewares'>, root: stri
   });
 }
 export default defineConfig({
+  // GitHub Pages serves this as a project page under /mtg-card-scanner/, not the domain root.
+  // Local dev, existing Tailscale/root deployments, and CI all keep the root base ('/') unless
+  // GITHUB_PAGES_BASE is explicitly set by the Pages deploy workflow.
+  base: process.env.GITHUB_PAGES_BASE ?? '/',
   server: { host: '127.0.0.1' }, build: { target: 'es2022' },
   plugins: [{
     name: 'catalog-compressed-asset-transport',

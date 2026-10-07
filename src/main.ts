@@ -36,7 +36,7 @@ const detectionStatus = el('p', 'カード検出なし', 'small'); detectionStat
 const overlay = new DetectionOverlay(overlayCanvas, video, visible => { detectionStatus.textContent = visible ? 'カードの四隅を検出 · カード名の確定とは別です' : 'カード検出なし'; });
 const cameraIntro = el('div', '', 'camera-intro');
 const introHeading = el('h2', '', 'camera-intro-heading');
-const introLogo = el('img', '', 'intro-logo'); introLogo.src = '/icons/mana-wheel.svg'; introLogo.alt = ''; introLogo.width = 34; introLogo.height = 34; introLogo.decoding = 'async';
+const introLogo = el('img', '', 'intro-logo'); introLogo.src = `${import.meta.env.BASE_URL}icons/mana-wheel.svg`; introLogo.alt = ''; introLogo.width = 34; introLogo.height = 34; introLogo.decoding = 'async';
 introHeading.append(introLogo, el('span', 'Mana Peek'));
 cameraIntro.append(introHeading, el('p', 'MTGカードをかざして、日本語情報や参考価格を確認。'), el('p', '結果をタップすると詳細が開きます。残したいカードは「履歴に保存」。', 'small'));
 const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -77,8 +77,8 @@ const sources = el('p');
 for (const [name, href] of [['Scryfall', 'https://scryfall.com'], ['Frankfurter / ECB', 'https://frankfurter.dev'], ['CollectorVision', 'https://github.com/HanClinto/CollectorVision']]) {
   const a = el('a', name); a.href = href!; a.target = '_blank'; a.rel = 'noopener noreferrer'; sources.append(a, document.createTextNode(' · '));
 }
-footer.append(sources, el('p', 'ローカル・内部検証版。認識コードとモデルはAGPL-3.0。公開・配布前にライセンス対応と公開承認が必要です。カードの権利はWizards of the Coast等の権利者に帰属します。', 'small'));
-const notices = el('a', '第三者ライセンスと利用条件'); notices.href = '/recognition/THIRD-PARTY-NOTICES.md'; footer.append(notices);
+footer.append(sources, el('p', 'このアプリと認識コード・モデルはAGPL-3.0でライセンスされています。カードの権利はWizards of the Coast等の権利者に帰属します。', 'small'));
+const notices = el('a', '第三者ライセンスと利用条件'); notices.href = `${import.meta.env.BASE_URL}recognition/THIRD-PARTY-NOTICES.md`; footer.append(notices);
 const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。参照画像はScryfallの画像配信元から取得します。撮影・選択画像は保存せず、解析ログはこのタブのメモリ内のみです。分析サービスへの送信はありません。'));
 footer.append(privacy);
 const debug = el('details'); debug.append(el('summary', '端末内の計測ログ')); const debugOutput = el('pre');
