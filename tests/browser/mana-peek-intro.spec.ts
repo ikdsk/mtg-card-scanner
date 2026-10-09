@@ -33,3 +33,13 @@ test('bottom navigation contains only search and history; gear retains settings'
  await page.getByRole('button',{name:'情報・設定',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'設定',exact:true})).toBeVisible();
 });
+
+test('idle intro links to the sister Pokéca Scanner app', async ({page}) => {
+ await page.goto('/');
+ const link=page.locator('.camera-intro #intro-pokeca-link');
+ await expect(link).toBeVisible();
+ await expect(link).toHaveText('ポケカ版はこちら →');
+ await expect(link).toHaveAttribute('href','https://ikdsk.github.io/pokeca-scanner/');
+ await expect(link).toHaveAttribute('target','_blank');
+ await expect(link).toHaveAttribute('rel','noopener noreferrer');
+});
