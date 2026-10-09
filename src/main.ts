@@ -117,6 +117,9 @@ const tentativePrintings=new PrintingsList(card=>viewPrinting(card));
 const tentativeLinks=el('section','','candidate-external-links');tentativeLinks.setAttribute('aria-label','外部リンク');
 const wisdomLink=externalLink('Wisdom Guildで見る');const hareruyaLink=externalLink('晴れる屋で見る');
 tentativeLinks.append(el('h3','外部リンク'),wisdomLink,hareruyaLink);
+// A DOM node lives in one place, so the compact panel gets its own pair, kept in sync by renderExternalLinks().
+const compactWisdomLink=externalLink('Wisdom Guild');const compactHareruyaLink=externalLink('晴れる屋');
+const compactLinks=el('div','','candidate-compact-links');compactLinks.append(compactWisdomLink,compactHareruyaLink);tentativeSummary.append(compactLinks);
 const nameDetails=button('',()=>openCandidateDetail(),'candidate-name-target');nameDetails.setAttribute('aria-label','カード名から詳細を見る');tentativeSummary.append(nameDetails);
 const imageDetails=button('',()=>openCandidateDetail(),'candidate-image-target');imageDetails.setAttribute('aria-label','画像から詳細を見る');tentativeSummary.append(imageDetails);
 // Detail order: card text first, then physical expansion/status, price sources, other printings.
@@ -367,7 +370,7 @@ function showCard(card:Card,faceIndex?:number,preferredFinish?:string):void {
 }
 // Plain links opened by the user's click; hrefs are only (re)computed here, never fetched.
 function externalLink(text:string):HTMLAnchorElement {const a=el('a',text,'external-link');a.target='_blank';a.rel='noopener noreferrer';return a;}
-function renderExternalLinks(card:Card,japanese:Card|null):void {const links=externalLinks(card,japanese);wisdomLink.href=links.wisdomGuild;hareruyaLink.href=links.hareruya;}
+function renderExternalLinks(card:Card,japanese:Card|null):void {const links=externalLinks(card,japanese);wisdomLink.href=compactWisdomLink.href=links.wisdomGuild;hareruyaLink.href=compactHareruyaLink.href=links.hareruya;}
 function applyJapanese(card:Card,cards:Card[]):void {
  if(japaneseName(card))return;
  const japanese=japaneseDisplay(card,cards);shownJapanese=japanese;renderExternalLinks(card,japanese);
