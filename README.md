@@ -4,6 +4,8 @@
 
 MTG（Magic: The Gathering）カードにスマホのカメラをかざすだけで、日本語のカード名・ルールテキスト・参考価格をすぐ確認できるカードスキャナーです。
 
+姉妹アプリ：ポケモンカード（日本語版）版の [Pokéca Scanner](https://ikdsk.github.io/pokeca-scanner/)（同じ操作感です）
+
 <p align="center">
   <img src="docs/screenshots/intro.png" alt="Mana Peek の待機画面。スキャン開始ボタンと簡単な使い方の説明が表示されている" width="280">
   <img src="docs/screenshots/card-detail.png" alt="認識したカードの詳細。日本語名、参考価格、対応フォーマットバッジ、日本語ルールテキストが表示されている" width="280">
