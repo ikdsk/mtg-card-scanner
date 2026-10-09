@@ -63,3 +63,13 @@ test('compact links stay current in the read-only history view', async ({ page }
   const hrefs = () => dialog(page).locator('.candidate-compact-links a').evaluateAll(as => as.map(x => x.getAttribute('href')));
   await expect.poll(hrefs).toEqual([`https://whisper.wisdom-guild.net/search.php?q=${encodeURIComponent('合成アルファ')}`, `https://www.hareruyamtg.com/ja/products/search?product=${encodeURIComponent('合成アルファ')}`]);
 });
+
+test('footer links to the sister Pokéca Scanner app in a new tab', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '情報・設定', exact: true }).click();
+  const link = page.locator('#information').getByRole('link', { name: 'Pokéca Scanner', exact: true });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute('href', 'https://ikdsk.github.io/pokeca-scanner/');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+});
