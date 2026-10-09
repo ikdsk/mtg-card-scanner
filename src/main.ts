@@ -87,6 +87,7 @@ for (const [name, href] of [['Scryfall', 'https://scryfall.com'], ['Frankfurter 
   const a = el('a', name); a.href = href!; a.target = '_blank'; a.rel = 'noopener noreferrer'; sources.append(a, document.createTextNode(' · '));
 }
 footer.append(sources, el('p', 'このアプリと認識コード・モデルはAGPL-3.0でライセンスされています。カードの権利はWizards of the Coast等の権利者に帰属します。', 'small'));
+const sister = el('p', '', 'small'); const sisterLink = externalLink('Pokéca Scanner'); sisterLink.href = 'https://ikdsk.github.io/pokeca-scanner/'; sisterLink.id = 'sister-app-link'; sister.append('ポケモンカード版の ', sisterLink, ' もあります'); footer.append(sister);
 const notices = el('a', '第三者ライセンスと利用条件'); notices.href = `${import.meta.env.BASE_URL}recognition/THIRD-PARTY-NOTICES.md`; footer.append(notices);
 const privacy = el('details'); privacy.append(el('summary', '通信・プライバシーの詳細'), el('p', 'カードIDや検索語をScryfallに、USD/JPYの通貨ペアをFrankfurterに送信します。認識用のコード・モデル・辞書はjsDelivr、Hugging Face、CollectorVisionCatalogから取得します。提供元には通常の通信情報が渡ります。参照画像はScryfallの画像配信元から取得します。撮影・選択画像は保存せず、解析ログはこのタブのメモリ内のみです。公開サイト（ikdsk.github.io）ではCloudflare Web Analyticsによる匿名のページビュー計測のみ行い、Cookie不要・個人を識別する情報は送信しません。画像やカード内容は送信対象外です。'));
 footer.append(privacy);
