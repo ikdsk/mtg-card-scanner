@@ -48,6 +48,7 @@ const introHeading = el('h2', '', 'camera-intro-heading');
 const introLogo = el('img', '', 'intro-logo'); introLogo.src = `${import.meta.env.BASE_URL}icons/mana-wheel.svg`; introLogo.alt = ''; introLogo.width = 34; introLogo.height = 34; introLogo.decoding = 'async';
 introHeading.append(introLogo, el('span', 'Mana Peek'));
 cameraIntro.append(introHeading, el('p', 'MTGカードをかざして、日本語情報や参考価格を確認。'), el('p', '結果をタップすると詳細が開きます。残したいカードは「履歴に保存」。', 'small'));
+const introPokeca = el('p', '', 'small intro-pokeca'); const introPokecaLink = externalLink('ポケカ版はこちら →'); introPokecaLink.href = 'https://ikdsk.github.io/pokeca-scanner/'; introPokecaLink.id = 'intro-pokeca-link'; introPokeca.append(introPokecaLink); cameraIntro.append(introPokeca);
 const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 for (const [name, value] of Object.entries({ viewBox: '0 0 24 28', width: '24', height: '28', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false' })) arrow.setAttribute(name, value);
 const arrowPath = document.createElementNS(arrow.namespaceURI, 'path'); arrowPath.setAttribute('d', 'M12 26V4M4 11l8-8 8 8'); arrow.append(arrowPath);
