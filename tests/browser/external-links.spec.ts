@@ -9,7 +9,7 @@ const expectLinks = async (page: Page, query: string) => {
   const wisdom = dialog(page).getByRole('link', { name: 'Wisdom Guildで見る', exact: true });
   const hareruya = dialog(page).getByRole('link', { name: '晴れる屋で見る', exact: true });
   await expect(wisdom).toHaveAttribute('href', `https://whisper.wisdom-guild.net/search.php?q=${query}`);
-  await expect(hareruya).toHaveAttribute('href', `https://www.hareruyamtg.com/ja/products/search?name=${query}`);
+  await expect(hareruya).toHaveAttribute('href', `https://www.hareruyamtg.com/ja/products/search?product=${query}`);
   for (const link of [wisdom, hareruya]) { await expect(link).toHaveAttribute('target', '_blank'); await expect(link).toHaveAttribute('rel', 'noopener noreferrer'); }
 };
 test('detail sheet links use the Japanese name, and nothing is requested before a click', async ({ page }) => {
@@ -37,7 +37,7 @@ const expectCompact = async (page: Page, query: string) => {
   const hareruya = compactLinks(page).getByRole('link', { name: '晴れる屋', exact: true });
   await expect(wisdom).toBeVisible(); await expect(hareruya).toBeVisible();
   await expect(wisdom).toHaveAttribute('href', `https://whisper.wisdom-guild.net/search.php?q=${query}`);
-  await expect(hareruya).toHaveAttribute('href', `https://www.hareruyamtg.com/ja/products/search?name=${query}`);
+  await expect(hareruya).toHaveAttribute('href', `https://www.hareruyamtg.com/ja/products/search?product=${query}`);
   for (const link of [wisdom, hareruya]) { await expect(link).toHaveAttribute('target', '_blank'); await expect(link).toHaveAttribute('rel', 'noopener noreferrer'); }
 };
 test('compact panel shows both links before the detail sheet opens, and requests nothing', async ({ page }) => {
@@ -61,5 +61,5 @@ test('compact links stay current in the read-only history view', async ({ page }
   await openRoute(page, '履歴'); await page.locator('.scan-history-row').first().click(); await expect(dialog(page)).toBeVisible();
   await expectLinks(page, encodeURIComponent('合成アルファ'));
   const hrefs = () => dialog(page).locator('.candidate-compact-links a').evaluateAll(as => as.map(x => x.getAttribute('href')));
-  await expect.poll(hrefs).toEqual([`https://whisper.wisdom-guild.net/search.php?q=${encodeURIComponent('合成アルファ')}`, `https://www.hareruyamtg.com/ja/products/search?name=${encodeURIComponent('合成アルファ')}`]);
+  await expect.poll(hrefs).toEqual([`https://whisper.wisdom-guild.net/search.php?q=${encodeURIComponent('合成アルファ')}`, `https://www.hareruyamtg.com/ja/products/search?product=${encodeURIComponent('合成アルファ')}`]);
 });
